@@ -16,7 +16,7 @@ def get_test_data_single_col():
         test_set.append((curr_df,rand_col,curr_df[rand_col].mean(skipna=True)))
     return test_set
 
-def test_SimpleImputer_single_col(imputer,get_test_data_single_col):
+def test_SimpleImputer_single_col(get_test_data_single_col):
     """Tests a Simple mean imputer for a single column.
         Other imputers will not get a test as the missing values can
         be filled with different accuracy by each model."""
