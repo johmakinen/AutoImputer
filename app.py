@@ -18,7 +18,12 @@ st.set_page_config(
     initial_sidebar_state='auto',
 )
 
-
+# ----------------------------------------------------------------------------------------
+# FUNCTIONS:
+@st.experimental_memo
+def convert_df(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv().encode('utf-8')
 # ----------------------------------------------------------------------------------------
 # LAYOUT
 t1, t2 = st.columns(2)
@@ -45,7 +50,8 @@ use_example_file = st.checkbox(
 GOT_DATA = 0
 if use_example_file:
     uploaded_file = "data\processed\iris_nans.csv"
-    
+
+# Read data, error handling
 if uploaded_file:
     FILE_OK = 1
     df = pd.read_csv(uploaded_file)
@@ -75,11 +81,10 @@ if uploaded_file:
      nan_cols)
 
 
-
-
 if GOT_DATA:
     res = df.copy()
     st.markdown("### Imputer selection and settings")
+
     # Select imputing method
     method = st.selectbox('Choose the imputing algorithm', ['SimpleImputer', 'Something_else'])
     if method == 'SimpleImputer':
@@ -90,13 +95,14 @@ if GOT_DATA:
     elif method == 'Something_else':
             opts = {'strategy':'mean'}
 
+    # If selection ready, press "Submit" to impute.
     with st.form(key='my_form'):
         submit_btn = st.form_submit_button(label="Impute!")
-
     if submit_btn:
         imputer = MySimpleImputer(target_col=target_col,**opts)
         res = imputer.impute(df)
 
+    # Show resulting table and the original data
     c1,_,c2 = st.columns((3,0.2,3))
     with c1:
         st.subheader('Resulting data')
@@ -104,5 +110,15 @@ if GOT_DATA:
     with c2:
         st.subheader('Original data')
         st.write(df)
+
+    # Give ability to download resulting data.
+    csv = convert_df(res)
+    st.download_button(
+        label="Download result data as CSV",
+        data=csv,
+        file_name='output.csv',
+        mime='text/csv',
+    )
         
         # Show validation error (RMSE if numerical, something else if categorical)
+
