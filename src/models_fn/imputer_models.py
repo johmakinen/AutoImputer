@@ -5,25 +5,20 @@ from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
 import pandas as pd
 import numpy as np
 import os
-
+import warnings
+warnings.filterwarnings("ignore")
 import xgboost as xgb
 
 
 class MySimpleImputer():
-    def __init__(self,target_col,**kwargs):
-        self.target_col = target_col
-        self.strategy = kwargs.get('strategy','mean')
+    def __init__(self,strategy):
+        self.strategy = strategy
 
     def impute(self,df):
         imp = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-        if self.target_col == 'ALL':
-            idf = pd.DataFrame(imp.fit_transform(df))
-            idf.columns = df.columns
-            idf.index = df.index
-        else:
-            idf = df.copy()
-            imp.fit(idf[self.target_col].values.reshape(-1, 1))
-            idf[self.target_col] = imp.transform(idf[self.target_col].values.reshape(-1, 1))
+        idf = pd.DataFrame(imp.fit_transform(df))
+        idf.columns = df.columns
+        idf.index = df.index
         return idf
 
 
@@ -34,19 +29,12 @@ def measure_val_error(df,imputer,n_folds=20):
         the possible validation error."""
     curr_df = df.dropna(axis=0,how='any').copy()
     errors = np.empty(n_folds)
-    # 10-fold cross validation
+    # n-fold cross validation
     for i in range(n_folds):
-        if imputer.target_col != 'ALL':
-            nans = curr_df.mask((np.random.random(curr_df.shape)<.4) & (curr_df.columns == imputer.target_col))
-            target = curr_df[nans[imputer.target_col].isna()][imputer.target_col].values
-            res = imputer.impute(nans)
-            res_values = res[nans[imputer.target_col].isna()][imputer.target_col].values
-
-        else:
-            target = np.array(curr_df.to_numpy()).ravel()
-            nans = curr_df.mask(np.random.random(curr_df.shape)<0.4)
-            res = imputer.impute(nans)
-            res_values = np.array(res.to_numpy()).ravel()
+        target = np.array(curr_df.to_numpy()).ravel()
+        nans = curr_df.mask(np.random.random(curr_df.shape)<0.4)
+        res = imputer.impute(nans)
+        res_values = np.array(res.to_numpy()).ravel()
         
         errors[i] = mean_squared_error(target,res_values,squared=True)
 
@@ -71,7 +59,7 @@ class XGBImputer():
                 best_model.predict(X_to_fill.drop(columns=curr_col)),
                 index=pd.Index(X_to_fill.index)
             )
-            # preds.index = 
+
             result[curr_col] = result[curr_col].fillna(preds)
 
         return result
@@ -88,7 +76,7 @@ class XGBImputer():
 
         # Choose type of model:
 
-        if self.dtype_list[curr_col] == 'regression':
+        if self.dtype_list[curr_col] == 'numeric':
             model = xgb.XGBRegressor()
             scoring = 'neg_mean_squared_error'
             param_grid = {
@@ -99,8 +87,8 @@ class XGBImputer():
             'learning_rate': [0.5]
                 }  
 
-        elif self.dtype_list[curr_col] == 'classification':
-            model = xgb.XGBClassifier()
+        elif self.dtype_list[curr_col] == 'categorical':
+            model = xgb.XGBClassifier(use_label_encoder=False)
             classes = pd.unique(data.dropna(subset=[curr_col])[curr_col])
             n_classes = len(classes)
             param_grid = {
@@ -116,8 +104,8 @@ class XGBImputer():
                 scoring = 'roc_auc'
 
             else:
-                model.set_params(objective='multi:softmax', n_classes=n_classes)
-                scoring = 'accuracy'
+                model.set_params(objective='multi:softmax',num_class=n_classes)
+                scoring = 'f1_micro'
 
         grid_search = RandomizedSearchCV(
             estimator=model,
@@ -138,17 +126,30 @@ class XGBImputer():
 
 if __name__ == '__main__':
 
+    # Load data
     path_project = os.path.abspath(
         os.path.join(__file__, "../../.."))
     path_processed_data = path_project+'/data/processed/'
-
-    imp1 = MySimpleImputer(target_col='ALL')
     data = pd.read_csv(path_processed_data+'iris_nans.csv')
-    dtype_list = dict(zip(data.columns, ['regression','regression','regression','regression','classification']))
+
+    # nää pitää tehdä inputille
+    dtypes = ['numeric','numeric','numeric','numeric','categorical']
+    cols = data.columns
+    dtype_list = dict(zip(cols,dtypes))
     print(dtype_list)
+
+    from sklearn.preprocessing import LabelEncoder
+    categorical_columns = [col for col in cols if dtype_list[col] == 'categorical']
+    le = LabelEncoder()
+    data[categorical_columns] = data[categorical_columns].apply(le.fit_transform)
+
+
+    # Implementoi tämä -> app.py
+    imp1 = MySimpleImputer()
     imp2 = XGBImputer(dtype_list=dtype_list,random_seed=42,verbose=0,cv=1)
     res = imp2.impute(data)
-    print(res.head())
+    print(res.head(10))
     # res = imp1.impute(data)
-    print(measure_val_error(data,imp1))
-    print(measure_val_error(data,imp2))
+    # e_simple = measure_val_error(data,imp1,n_folds=1)
+    # e_xgb = measure_val_error(data,imp2,n_folds=1)
+    # print(f'Errors: Simple {e_simple}, XGBoost {e_xgb}')
