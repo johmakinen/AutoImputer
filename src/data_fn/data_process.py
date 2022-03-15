@@ -33,6 +33,7 @@ def simulate_missing_values(df,output_name,prop=0.4,n_cols=1):
         nans.loc[df.sample(int(df.shape[0]*prop), random_state=32).index,random.sample(df.columns.values.tolist(),k=n_cols)] = np.nan
         nans.to_csv(path_processed_data+output_name+'.csv', index=False)
 
+
 def test_input_data(df):
     """Tets the given input data for:
         1. Is it empty

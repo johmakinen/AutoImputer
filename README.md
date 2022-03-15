@@ -6,8 +6,13 @@ A way to impute missing values using a Streamlit app
 - [x] Add input file
     - [x] Tests for input file shapes and dtypes (only allow numerical for now)
 - [x] Add output save option
-- [ ] Implement validation data error (Parent class, which imputers inherit)
+- [x] Implement validation data error
 - [ ] Visualize results/val_errors using plotly
 - [ ] Add more Imputer methods
-- [ ] ???
+- [ ] Github README
+- [ ] Add to portfolio
+- [ ] Add support for categorical features (more imputer methods)
+- [ ] pytest and profiling
+
+
 

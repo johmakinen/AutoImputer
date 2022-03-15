@@ -1,9 +1,11 @@
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
 import pandas as pd
 import numpy as np
+import random
 
-class MySimpleImputer:
+
+class MySimpleImputer():
     def __init__(self,target_col,**kwargs):
         self.target_col = target_col
         self.strategy = kwargs.get('strategy','mean')
@@ -20,32 +22,30 @@ class MySimpleImputer:
             idf[self.target_col] = imp.transform(idf[self.target_col].values.reshape(-1, 1))
         return idf
 
-# x = MySimpleImputer(target_col='sepal length (cm)',strategy='mean')
-# res = x.impute(df)
-
-# Haluan että voin kutsua app.py:ssä:
-# x = MyClass('simpleimputer')
-# res = x.impute(**kwargs)
-# val_errors = x.run_validation()
 
 
 
-# def impute_values(df,target_col,method,**kwargs):
-#     if method == 'SimpleImputer':
-#         imp = SimpleImputer(missing_values=np.nan, strategy=kwargs.get('strategy', 'mean'))
-#         if target_col == 'all':
-#             idf = pd.DataFrame(imp.fit_transform(df))
-#             idf.columns = df.columns
-#             idf.index = df.index
-#         else:
-#             idf = df.copy()
-#             imp.fit(idf[target_col])
-#             idf[target_col] = imp.transform(idf[target_col])
-#         return idf
-#     else:
-#         return df
+def measure_val_error(df,imputer,n_folds=20):
+    """This function takes a dataframe and computes
+        the possible validation error."""
+    curr_df = df.dropna(axis=0,how='any').copy()
+    errors = np.empty(n_folds)
+    # 10-fold cross validation
+    for i in range(n_folds):
+        if imputer.target_col != 'ALL':
+            nans = curr_df.mask((np.random.random(curr_df.shape)<.4) & (curr_df.columns == imputer.target_col))
+            target = curr_df[nans[imputer.target_col].isna()][imputer.target_col].values
+            res = imputer.impute(nans)
+            res_values = res[nans[imputer.target_col].isna()][imputer.target_col].values
+
+        else:
+            target = np.array(curr_df.to_numpy()).ravel()
+            nans = curr_df.mask(np.random.random(curr_df.shape)<0.4)
+            res = imputer.impute(nans)
+            res_values = np.array(res.to_numpy()).ravel()
+        
+        errors[i] = mean_squared_error(target,res_values,squared=True)
+
+    return errors.mean(),errors.std()
 
 
-def measure_error(y_real, y_pred, type='RMSE'):
-    if type == 'RMSE':
-        return mean_squared_error(y_real, y_pred)

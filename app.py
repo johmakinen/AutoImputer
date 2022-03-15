@@ -8,7 +8,7 @@ from sklearn import datasets
 
 # My modules
 # from src.data_fn.data_process import load_sample_iris
-from src.models_fn.imputer_models import MySimpleImputer
+from src.models_fn.imputer_models import MySimpleImputer,measure_val_error
 from src.data_fn.data_process import test_input_data
 
 
@@ -102,6 +102,12 @@ if GOT_DATA:
         imputer = MySimpleImputer(target_col=target_col,**opts)
         res = imputer.impute(df)
 
+        # Measure validation error
+        st.markdown("### Validation error")
+        error = measure_val_error(df,imputer=imputer,n_folds=20)
+        st.write(f"""Using 20-fold cross_validation      
+            Root Mean Squared Error (RMSE): {round(error[0],2)} $\pm$ {round(error[1],2)}""")
+            
     # Show resulting table and the original data
     c1,_,c2 = st.columns((3,0.2,3))
     with c1:
@@ -110,6 +116,9 @@ if GOT_DATA:
     with c2:
         st.subheader('Original data')
         st.write(df)
+
+
+
 
     # Give ability to download resulting data.
     csv = convert_df(res)
