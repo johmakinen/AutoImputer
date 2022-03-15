@@ -9,6 +9,8 @@ from sklearn import datasets
 # My modules
 # from src.data_fn.data_process import load_sample_iris
 from src.models_fn.imputer_models import MySimpleImputer
+from src.data_fn.data_process import test_input_data
+
 
 st.set_page_config(
     page_title="AutoImputer",
@@ -31,7 +33,8 @@ with t2:
     """)
 
 st.write("")
-st.markdown("""Imputing missing values automatically...""")
+st.markdown("""Imputing missing values automatically...   
+                _Only numerical data for now_""")
 
 uploaded_file = st.file_uploader("Upload CSV", type=".csv")
 
@@ -39,25 +42,39 @@ use_example_file = st.checkbox(
     "Use example file", False, help="Use in-built example file to demo the app"
 )
 
+GOT_DATA = 0
 if use_example_file:
     uploaded_file = "data\processed\iris_nans.csv"
     
 if uploaded_file:
+    FILE_OK = 1
     df = pd.read_csv(uploaded_file)
-    # validate uploaded_file: dtypes, size, has nans, is not empty, ...
-    st.markdown("### Data preview")
-    st.dataframe(df[pd.isnull(df).any(axis=1)].head())
+    val_df = test_input_data(df)
+    if val_df['is_empty']:
+        st.error('Error: Empty data')
+        FILE_OK = 0
+    if np.dtype('object') in val_df['dtypes']:
+        st.error('Error: Non-numeric data not supported yet')
+        FILE_OK = 0
+    if val_df['prop_missing'] > 0.75:
+        st.error('Error: Proportion of missing values too high (' + str(int(val_df['prop_missing']*100)) +'%)')
+        FILE_OK = 0
+    if FILE_OK:
+        st.markdown("### Data preview")
+        st.dataframe(df[pd.isnull(df).any(axis=1)].head())
+        GOT_DATA = 1
+
 
 # Select data according to the input
 st.sidebar.title('Select target column(s) to impute')
-if uploaded_file and (uploaded_file != "data\processed\iris_nans.csv"):
-    target_col = st.sidebar.multiselect(
-        '', set(np.append(df.columns.values,'all')), default=df.columns[0])
-elif use_example_file:
-    target_col = st.sidebar.multiselect(
-        'Only sepal length (cm) available for sample data', set(['sepal length (cm)']), default='sepal length (cm)')
 
-GOT_DATA = 1 if uploaded_file or use_example_file else 0
+if uploaded_file:
+    nan_cols = np.append(np.array(['ALL']),df.columns[df.isna().any()].values)
+    target_col = st.sidebar.selectbox(
+     '',
+     nan_cols)
+
+
 
 
 if GOT_DATA:

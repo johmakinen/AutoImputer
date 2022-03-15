@@ -10,7 +10,7 @@ class MySimpleImputer:
 
     def impute(self,df):
         imp = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-        if self.target_col == 'all':
+        if self.target_col == 'ALL':
             idf = pd.DataFrame(imp.fit_transform(df))
             idf.columns = df.columns
             idf.index = df.index
