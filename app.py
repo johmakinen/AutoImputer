@@ -8,8 +8,8 @@ from sklearn import datasets
 
 # My modules
 # from src.data_fn.data_process import load_sample_iris
-from src.models_fn.imputer_models import MySimpleImputer,measure_val_error
-from src.data_fn.data_process import test_input_data
+from src.models_fn.imputer_models import MySimpleImputer,XGBImputer,measure_val_error
+from src.data_fn.data_process import test_input_data,format_dtypes
 
 
 st.set_page_config(
@@ -24,6 +24,13 @@ st.set_page_config(
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode('utf-8')
+
+# call back function -> runs BEFORE the rest of the app
+def reset_button():
+    st.session_state["p"] = False
+    st.session_state['cat_cols'] = []
+    return
+
 # ----------------------------------------------------------------------------------------
 # LAYOUT
 t1, t2 = st.columns(2)
@@ -40,6 +47,9 @@ with t2:
 st.write("")
 st.markdown("""Imputing missing values automatically...   
                 _Only numerical data for now_""")
+st.sidebar.title('Settings')
+
+
 
 uploaded_file = st.file_uploader("Upload CSV", type=".csv")
 
@@ -70,42 +80,65 @@ if uploaded_file:
         st.dataframe(df[pd.isnull(df).any(axis=1)].head())
         GOT_DATA = 1
 
-
-# Select data according to the input
-st.sidebar.title('Select target column(s) to impute')
-
-if uploaded_file:
-    nan_cols = np.append(np.array(['ALL']),df.columns[df.isna().any()].values)
-    target_col = st.sidebar.selectbox(
-     '',
-     nan_cols)
-
-
 if GOT_DATA:
+    # Get user input for column types
+    cols = df.columns
+    cat_cols = st.multiselect(
+                        'Please input categorical columns here.',
+                        cols,
+                        default=None,
+                        key='cat_cols')
+    dtypes = ['numeric' if col not in cat_cols else 'categorical' for col in cols]
+    c1,c2,_ = st.columns((2,2,5))
+    with c1:
+        submit_cols = st.checkbox(label="Submit column types", key='p')
+    with c2:
+        #button to control reset
+        reset=st.button('Set columns again', on_click=reset_button)
+
+
+FORMATTED_DATA = 0
+if GOT_DATA and submit_cols:
+    df,dtype_list = format_dtypes(df,dtypes,cols)
+    FORMATTED_DATA = 1
+
+
+if GOT_DATA and FORMATTED_DATA:
     res = df.copy()
     st.markdown("### Imputer selection and settings")
 
+    # Default options:
+    strategy = 'mean'
+    cv_opt = 3
+
+
     # Select imputing method
-    method = st.selectbox('Choose the imputing algorithm', ['SimpleImputer', 'Something_else'])
+    method = st.selectbox('Choose the imputing algorithm', ['SimpleImputer', 'XGBoost'])
     if method == 'SimpleImputer':
         with st.expander("Settings:"):
             strategy = st.radio('Select imputing method',
                     ('mean','median','most_frequent'))
-            opts = {'strategy':strategy}
-    elif method == 'Something_else':
-            opts = {'strategy':'mean'}
+            st.write('Do note that SimpleImputer treats all columns as numeric.')
+    elif method == 'XGBoost':
+        with st.expander("Settings:"):
+            cv_opt = st.slider('Number of folds to use in cross-validation when learning the best parameters.',
+                            1,5,3)
 
     # If selection ready, press "Submit" to impute.
     with st.form(key='my_form'):
         submit_btn = st.form_submit_button(label="Impute!")
+        imputer_dict = {'SimpleImputer': MySimpleImputer(strategy=strategy),
+                        'XGBoost': XGBImputer(dtype_list=dtype_list,random_seed=42,verbose=0,cv=cv_opt)}
     if submit_btn:
-        imputer = MySimpleImputer(target_col=target_col,**opts)
+        # imputer = MySimpleImputer(strategy=strategy)
+        imputer = imputer_dict[method]
         res = imputer.impute(df)
 
         # Measure validation error
         st.markdown("### Validation error")
-        error = measure_val_error(df,imputer=imputer,n_folds=20)
-        st.write(f"""Using 20-fold cross_validation      
+        n_folds = 5
+        error = measure_val_error(df,imputer=imputer,n_folds=n_folds)
+        st.write(f"""Using {n_folds}-fold cross_validation      
             Root Mean Squared Error (RMSE): {round(error[0],2)} $\pm$ {round(error[1],2)}""")
             
     # Show resulting table and the original data
