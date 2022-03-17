@@ -162,13 +162,11 @@ if GOT_DATA and FORMATTED_DATA:
         st.write(f"Imputation took {round(elapsed_time,2)} seconds.")
 
         # Measure validation error
-        st.markdown("### Validation error")
-        n_folds = 5
-        error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
-        st.write(
-            f"""Using {n_folds}-fold cross_validation      
-            Root Mean Squared Error (RMSE): {round(error[0],2)} $\pm$ {round(error[1],2)}"""
-        )
+        with st.expander('Validation error'):
+            st.write('Currently error is measured as Root Mean Squared Error (RMSE)')
+            n_folds = 5
+            error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
+            st.write(error)
 
     # Show resulting table and the original data
     c1, _, c2 = st.columns((3, 0.2, 3))

@@ -1,12 +1,18 @@
+from pathlib import Path
+print('Running' if __name__ == '__main__' else 'Importing', Path(__file__).resolve())
+
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import mean_squared_error
+# from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
-from src.data_fn.data_process import format_dtypes,replace_infs
+# from src.data_fn.data_process import format_dtypes,replace_infs
+from ..data_fn.data_process import format_dtypes,replace_infs
 import pandas as pd
 import numpy as np
 import os
 import warnings
+
+
 
 warnings.filterwarnings("ignore")
 import xgboost as xgb
@@ -48,42 +54,6 @@ class MySimpleImputer:
         idf.columns = df.columns
         idf.index = df.index
         return idf
-
-
-def measure_val_error(df, imputer, n_folds=5):
-    """ Computes the possible error of the imputation.
-        Uses N-fold subsampling and averages the errors
-        over the folds. At the moment only RMSE for all data
-        columns is available.
-
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input data with missing values
-    imputer : Custom imputer
-        Must have an "impute" method, which returns a dataframe. E.g. SimpleImputer()
-    n_folds : int, optional
-        Number of N-folds to perform, by default 5
-
-    Returns
-    -------
-    (float,float)
-        Mean and standard deviation of folded errors
-    """
-
-    curr_df = df.dropna(axis=0, how="any").copy()
-    errors = np.empty(n_folds)
-    # n-fold cross validation
-    for i in range(n_folds):
-        target = np.array(curr_df.to_numpy()).ravel()
-        nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
-        res = imputer.impute(nans)
-        res_values = np.array(res.to_numpy()).ravel()
-
-        errors[i] = mean_squared_error(target, res_values, squared=True)
-
-    return errors.mean(), errors.std()
 
 
 class XGBImputer:
@@ -132,17 +102,39 @@ class XGBImputer:
         # This can be changed later if we want such behaviour.
         
         curr_df = replace_infs(df.copy())
-        result = replace_infs(curr_df.copy())
+        result = curr_df.copy()
 
         nan_cols = df.columns[df.isna().any()].tolist()
+        cat_cols = [col for col in cols if self.dtype_list[col] == "categorical"]
 
         for curr_col in nan_cols:
-            best_model = self.train(curr_df, curr_col)
-            X_to_fill = curr_df[curr_df[curr_col].isnull()]
+            df_target_col = curr_df.dropna(subset=[curr_col]) # Target has no nans
+            df_feature_col = curr_df[curr_df[curr_col].isnull()] # prediction observations are the ones where target is nan
+
+            # If current column to be imputed is categorical -> encode label
+            if curr_col in cat_cols:
+                # Encode label
+                le = LabelEncoder()
+                df_target_col[curr_col] = le.fit_transform(df_target_col[curr_col])
+                df_feature_col[curr_col] = le.fit_transform(df_feature_col[curr_col])
+
+            # Dummify rest categorical cols
+            for cat_col in cat_cols: # For all catgorical cols
+                if cat_col != curr_col: # But not current col
+                    # Drop cat col in question, and concat the dummified version of that column.
+                    df_target_col = pd.concat([df_target_col.drop(cat_col,axis=1), pd.get_dummies(df_target_col[cat_col])], axis=1)
+                    df_feature_col = pd.concat([df_feature_col.drop(cat_col,axis=1), pd.get_dummies(df_feature_col[cat_col])], axis=1)
+
+            #Get best model
+            best_model = self.train(df_target_col, curr_col)
+
+            # These are the features to use for prediction (where target has nan)
+            # X_to_fill = df_target_col[df_target_col[curr_col].isnull()]
+            # print(X_to_fill.drop(columns=curr_col))
 
             preds = pd.Series(
-                best_model.predict(X_to_fill.drop(columns=curr_col)),
-                index=pd.Index(X_to_fill.index),
+                best_model.predict(df_feature_col.drop(columns=curr_col)),
+                index=pd.Index(df_feature_col.index),
             )
 
             result[curr_col] = result[curr_col].fillna(preds)
@@ -164,7 +156,7 @@ class XGBImputer:
         xgboost.XGBRegressor() or xgboost.Classifier()
             Best model found for current column data
         """
-
+        # Already done in prev phase...
         train_set = df.dropna(subset=[curr_col])
 
         X_train, y_train = train_set.drop(curr_col, axis=1), train_set[curr_col]
@@ -184,7 +176,7 @@ class XGBImputer:
 
         elif self.dtype_list[curr_col] == "categorical":
             model = xgb.XGBClassifier(use_label_encoder=False)
-            classes = pd.unique(train_set[curr_col])
+            classes = pd.unique(y_train)
             n_classes = len(classes)
             param_grid = {
                 "learning_rate": [0.25, 0.3, 0.4],
@@ -217,6 +209,43 @@ class XGBImputer:
         return grid_search.best_estimator_
 
 
+def measure_val_error(df, imputer, n_folds=5):
+    """ Computes the possible error of the imputation.
+        Uses N-fold subsampling and averages the errors
+        over the folds. At the moment only RMSE for all data
+        columns is available.
+
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data with missing values
+    imputer : Custom imputer
+        Must have an "impute" method, which returns a dataframe. E.g. SimpleImputer()
+    n_folds : int, optional
+        Number of N-folds to perform, by default 5
+
+    Returns
+    -------
+    dict
+        Mean RMSE error for each column as a dict
+
+    """
+
+    curr_df = df.dropna(axis=0, how="any").copy()
+    errors = pd.DataFrame(((curr_df-curr_df)**2).mean(axis=0)**(1/2)).T
+    # n-fold cross validation
+    for i in range(n_folds):
+        nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
+        res = imputer.impute(nans)
+        curr_errors = pd.DataFrame(((res-curr_df)**2).mean(axis=0)**(1/2)).T
+        errors = pd.concat([errors,curr_errors],axis=0)
+
+    
+    return pd.DataFrame(errors.iloc[1:,:].mean(axis=0)).round(2).to_dict()[0]
+
+
+
 if __name__ == "__main__":
 
     # Load data
@@ -227,20 +256,15 @@ if __name__ == "__main__":
     # nää pitää tehdä inputille
     dtypes = ["numeric", "numeric", "numeric", "numeric", "categorical"]
     cols = data.columns
-    # dtype_list = dict(zip(cols,dtypes))
-    # print(dtype_list)
     data, dtype_list = format_dtypes(data, dtypes=dtypes, cols=cols)
 
-    categorical_columns = [col for col in cols if dtype_list[col] == "categorical"]
-    le = LabelEncoder()
-    data[categorical_columns] = data[categorical_columns].apply(le.fit_transform)
-
     # Implementoi tämä -> app.py
-    imp1 = MySimpleImputer()
-    imp2 = XGBImputer(dtype_list=dtype_list, random_seed=42, verbose=0, cv=1)
-    res = imp2.impute(data)
+    # imp = MySimpleImputer()
+    # res = imp.impute(data)
+
+    imp = XGBImputer(dtype_list=dtype_list, random_seed=42, verbose=0, cv=1)
+    res = imp.impute(data)
+    print(data.head(10))
     print(res.head(10))
-    # res = imp1.impute(data)
-    # e_simple = measure_val_error(data,imp1,n_folds=1)
-    # e_xgb = measure_val_error(data,imp2,n_folds=1)
-    # print(f'Errors: Simple {e_simple}, XGBoost {e_xgb}')
+    # error_ = measure_val_error(data,imp,n_folds=1)
+    # print(error_)

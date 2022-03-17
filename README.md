@@ -17,11 +17,15 @@ A way to impute missing values using a Streamlit app
 - [x] Bring xgbimputer to app.py
 - [x] Comment all functions and classes, with input parameter specs, clean up useless comments
 - [x] Unit tests for xgboost, random samples with mixed dtypes, inf, negatives, etc...
-- [ ] Validation error for each column separately, use st.expander in app.py
+- [x] XGBoost categorical data when doing regression (categorical feature)
+    - [x] imputation when categorical target has nans
+    - At the moment, dummifying all but target -> not working looping only over nan cols. Done [x]
+- [] Validation error for each column separately, use st.expander in app.py
+- [ ] categorical data measure error
+- [ ] Test if input data has rows with all missing values -> remove from data + warning
 - [ ] Visualize results/val_errors using plotly
 - [ ] Github README
-- [ ] pytest and profiling
-    - Can we make XGBoost faster?
+- [ ] Can we make XGBoost faster?
 - [ ] Make everything nice looking
     - [ ] Add intoduction
     - [ ] Add explanations using st.expander to everything
