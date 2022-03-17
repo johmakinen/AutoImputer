@@ -22,7 +22,9 @@ A way to impute missing values using a Streamlit app
     - At the moment, dummifying all but target -> not working looping only over nan cols. Done [x]
 - [x] Validation error for each column separately, use st.expander in app.py
 - [ ] categorical data measure error
-- [ ] 'format_dtypes" function reformat to only give dtypes_list. Do not change data
+- [ ] cache xgboost results
+- [ ] XGBImputer has some WETWET code when wrangling the x_train,x_test data (dummifying), fix this
+- [ ] 'format_dtypes" function: reformat to only give dtypes_list. Do not change data
 - [ ] Test if input data has rows with all missing values -> remove from data + warning
 - [ ] Visualize results/val_errors using plotly
 - [ ] Github README
