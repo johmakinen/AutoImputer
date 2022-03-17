@@ -113,9 +113,7 @@ class XGBImputer:
 
         for curr_col in nan_cols:
             df_target_col = curr_df.dropna(subset=[curr_col])  # Target has no nans
-            df_feature_col = curr_df[
-                curr_df[curr_col].isnull()
-            ] 
+            df_feature_col = curr_df[curr_df[curr_col].isnull()]
 
             # If current column to be imputed is categorical -> encode label
             if curr_col in cat_cols:
