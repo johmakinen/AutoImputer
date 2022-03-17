@@ -2,7 +2,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
-from src.data_fn.data_process import format_dtypes
+from src.data_fn.data_process import format_dtypes,replace_infs
 import pandas as pd
 import numpy as np
 import os
@@ -42,8 +42,9 @@ class MySimpleImputer:
         """
         if df.empty:
             return df
+        
         imp = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-        idf = pd.DataFrame(imp.fit_transform(df))
+        idf = pd.DataFrame(imp.fit_transform(replace_infs(df)))
         idf.columns = df.columns
         idf.index = df.index
         return idf
@@ -125,12 +126,19 @@ class XGBImputer:
         if df.empty:
             return df
 
-        result = df.copy()
+        # We want to keep separate the results and the current data.
+        # This is because we dont want our imputations of one column
+        # to affect the imputations of other columns.
+        # This can be changed later if we want such behaviour.
+        
+        curr_df = replace_infs(df.copy())
+        result = replace_infs(curr_df.copy())
+
         nan_cols = df.columns[df.isna().any()].tolist()
 
         for curr_col in nan_cols:
-            best_model = self.train(df, curr_col)
-            X_to_fill = df[df[curr_col].isnull()]
+            best_model = self.train(curr_df, curr_col)
+            X_to_fill = curr_df[curr_df[curr_col].isnull()]
 
             preds = pd.Series(
                 best_model.predict(X_to_fill.drop(columns=curr_col)),

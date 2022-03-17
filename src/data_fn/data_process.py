@@ -81,6 +81,23 @@ def test_input_data(df):
     return res
 
 
+def replace_infs(df):
+    """Replaces infinities with min/max of the column
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    m1 = df.eq(np.inf)
+    m2 = df.eq(-np.inf)
+    df = df.mask(m1, df[~m1].max(), axis=1).mask(m2, df[~m2].min(), axis=1)
+    return df
+
 def format_dtypes(df, dtypes, cols):
     """Format the dtypes of our data to be
         compatible with complex imputers (such as XGBoost) 
@@ -101,6 +118,8 @@ def format_dtypes(df, dtypes, cols):
     pd.DataFrame, dict
         Returns the formatted data, the dict that can be used to determine the "dtype" of a column.
     """
+
+    # Encode categorical values
     dtype_list = dict(zip(cols, dtypes))
     categorical_columns = [col for col in cols if dtype_list[col] == "categorical"]
     le = LabelEncoder()

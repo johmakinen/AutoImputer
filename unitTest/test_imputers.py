@@ -40,7 +40,14 @@ def get_test_data():
             )
             dtypes[curr_df.columns.tolist().index(col)] = "categorical"
 
+        # Add a few np.inf values to random dataframes,
+        # We want the models to be robust
+        if np.random.random() < 0.5:
+            inf_col = random.choice([col for col in curr_df.columns if col not in cat_cols])
+            curr_df.loc[np.random.randint(low=0,high=curr_df.shape[0]),inf_col] = np.inf
+            curr_df.loc[np.random.randint(low=0,high=curr_df.shape[0]),inf_col] = -np.inf
         test_set.append((curr_df, dtypes))
+    
     return test_set
 
 
@@ -68,7 +75,6 @@ def test_Imputers(get_test_data):
             assert res.isnull().sum().sum() == 0  # All missing values filled
 
 
-# def test_input()...
 
 
 # Instructions:

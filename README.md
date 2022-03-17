@@ -16,7 +16,7 @@ A way to impute missing values using a Streamlit app
 - [x] add data preprocessing function that labels categorical columns
 - [x] Bring xgbimputer to app.py
 - [x] Comment all functions and classes, with input parameter specs, clean up useless comments
-- [ ] Unit tests for xgboost, random samples with mixed dtypes, inf, negatives, etc...
+- [x] Unit tests for xgboost, random samples with mixed dtypes, inf, negatives, etc...
 - [ ] Validation error for each column separately, use st.expander in app.py
 - [ ] Visualize results/val_errors using plotly
 - [ ] Github README
