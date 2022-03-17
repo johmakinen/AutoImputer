@@ -40,6 +40,8 @@ class MySimpleImputer:
         pd.DataFrame
             The resulting data where missing values have been filled using the given strategy.
         """
+        if df.empty:
+            return df
         imp = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
         idf = pd.DataFrame(imp.fit_transform(df))
         idf.columns = df.columns
@@ -120,6 +122,9 @@ class XGBImputer:
         pd.DataFrame
             Data with missing values imputed
         """
+        if df.empty:
+            return df
+
         result = df.copy()
         nan_cols = df.columns[df.isna().any()].tolist()
 
@@ -193,7 +198,7 @@ class XGBImputer:
             estimator=model,
             param_distributions=param_grid,
             scoring=scoring,
-            n_jobs=2,
+            n_jobs=-1,
             cv=5,
             refit=True,
             random_state=self.random_seed,

@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from timeit import default_timer as timer
+
 # from PIL import Image
 
 # My modules
@@ -86,8 +87,8 @@ if uploaded_file:
         st.error("Error: Empty data")
         FILE_OK = 0
     if val_df["prop_missing"] > 0.75:
-        st.error(
-            "Error: Proportion of missing values too high ("
+        st.warning(
+            "Warning: Proportion of missing values too high for accurate imputation ("
             + str(int(val_df["prop_missing"] * 100))
             + "%)"
         )

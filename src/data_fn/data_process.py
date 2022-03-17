@@ -3,7 +3,6 @@ from sklearn.preprocessing import LabelEncoder
 import pandas as pd
 import numpy as np
 import os
-import random
 
 
 def create_iris_sample():
@@ -26,7 +25,7 @@ def create_iris_sample():
     return df
 
 
-def simulate_missing_values(df, output_name = None, prop= 0.4):
+def simulate_missing_values(df, output_name=None, prop=0.4):
     """Adds missing values to a dataframe,
             saves the df into a csv.
             Used mostly for sample data purposes.
