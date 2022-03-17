@@ -7,12 +7,16 @@ import random
 
 
 def create_iris_sample():
-    """Load and create iris dataset,
-        save it to csv"""
+    """Creates a sample dataset using the iris data.
+        Writes the data into csv for faster usage.
+
+    Returns
+    -------
+    pd.DataFrame
+        Iris data
+    """
     path_project = os.path.abspath(os.path.join(__file__, "../../.."))
     path_processed_data = path_project + "/data/processed/"
-    # path_raw_data = path_project+'/data/raw/'
-    # import some data to play with
     iris = datasets.load_iris()
     df = pd.DataFrame(
         data=np.c_[iris["data"], iris["target"]],
@@ -22,26 +26,53 @@ def create_iris_sample():
     return df
 
 
-def simulate_missing_values(df, output_name, prop=0.4, n_cols=1):
+def simulate_missing_values(df, output_name = None, prop= 0.4):
     """Adds missing values to a dataframe,
             saves the df into a csv.
-            Used mostly for sample data purposes."""
-    path_project = os.path.abspath(os.path.join(__file__, "../../.."))
-    path_processed_data = path_project + "/data/processed/"
+            Used mostly for sample data purposes.
 
-    nans = df.copy()
-    nans.loc[
-        df.sample(int(df.shape[0] * prop), random_state=32).index,
-        random.sample(df.columns.values.tolist(), k=n_cols),
-    ] = np.nan
-    nans.to_csv(path_processed_data + output_name + ".csv", index=False)
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data
+    output_name : string
+        name for the output file (csv)
+    prop : float, optional
+        Approximate proportion missing values
+    
+    Returns
+    -------
+    pd.DataFrame
+        Data with missing values
+    """
+    nans = df.mask(np.random.random(df.shape) < prop)
+    if output_name:
+        path_project = os.path.abspath(os.path.join(__file__, "../../.."))
+        path_processed_data = path_project + "/data/processed/"
+        nans.to_csv(path_processed_data + output_name + ".csv", index=False)
+    return nans
 
 
 def test_input_data(df):
-    """Tets the given input data for:
+    """Tests the given input data for:
         1. Is it empty
         2. What dtypes it has
-        3. Proportion of nan values, impossible to impute if over 80%(?)"""
+        3. Proportion of nan values
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data
+
+    Returns
+    -------
+    dict
+        {
+        "is_empty": Boolean,
+        "dtypes": set,
+        "prop_missing": float,
+    }
+    """
     res = {
         "is_empty": df.empty,
         "dtypes": set(df.dtypes.tolist()),
@@ -52,6 +83,25 @@ def test_input_data(df):
 
 
 def format_dtypes(df, dtypes, cols):
+    """Format the dtypes of our data to be
+        compatible with complex imputers (such as XGBoost) 
+
+    Parameters
+    ----------
+    df : pd.DataFrame   
+        Input data
+    dtypes : list
+            "dtypes" of the columns.
+            For example ['numeric','numeric','categorical']
+            These are given by the user manually
+    cols : list or np.array
+        names of the columns in the same order as dtypes list
+
+    Returns
+    -------
+    pd.DataFrame, dict
+        Returns the formatted data, the dict that can be used to determine the "dtype" of a column.
+    """
     dtype_list = dict(zip(cols, dtypes))
     categorical_columns = [col for col in cols if dtype_list[col] == "categorical"]
     le = LabelEncoder()
@@ -61,6 +111,5 @@ def format_dtypes(df, dtypes, cols):
 
 if __name__ == "__main__":
     df = create_iris_sample()
-    simulate_missing_values(
-        df, output_name="sample_data_with_errors", prop=0.9, n_cols=5
-    )
+    simulate_missing_values(df, output_name="sample_data_with_errors", prop=0.9)
+    simulate_missing_values(df, output_name="iris_nans", prop=0.2)

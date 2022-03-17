@@ -15,13 +15,17 @@ A way to impute missing values using a Streamlit app
     - Can't continue without selection
 - [x] add data preprocessing function that labels categorical columns
 - [x] Bring xgbimputer to app.py
-- [ ] Comment all functions and classes, with input parameter specs, clean up useless comments
+- [x] Comment all functions and classes, with input parameter specs, clean up useless comments
 - [ ] Unit tests for xgboost, random samples with mixed dtypes, inf, negatives, etc...
+- [ ] Validation error for each column separately, use st.expander in app.py
 - [ ] Visualize results/val_errors using plotly
 - [ ] Github README
 - [ ] pytest and profiling
-    - [Can we make XGBoost faster?]
+    - Can we make XGBoost faster?
 - [ ] Make everything nice looking
+    - [ ] Add intoduction
+    - [ ] Add explanations using st.expander to everything
+    - [ ] Change theme
 - [ ] Add to portfolio
 
 
