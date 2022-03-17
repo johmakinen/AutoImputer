@@ -105,7 +105,7 @@ class XGBImputer:
         result = curr_df.copy()
 
         nan_cols = df.columns[df.isna().any()].tolist()
-        cat_cols = [col for col in cols if self.dtype_list[col] == "categorical"]
+        cat_cols = [col for col in curr_df.columns if self.dtype_list[col] == "categorical"]
 
         for curr_col in nan_cols:
             df_target_col = curr_df.dropna(subset=[curr_col]) # Target has no nans
@@ -122,8 +122,8 @@ class XGBImputer:
             for cat_col in cat_cols: # For all catgorical cols
                 if cat_col != curr_col: # But not current col
                     # Drop cat col in question, and concat the dummified version of that column.
-                    df_target_col = pd.concat([df_target_col.drop(cat_col,axis=1), pd.get_dummies(df_target_col[cat_col])], axis=1)
-                    df_feature_col = pd.concat([df_feature_col.drop(cat_col,axis=1), pd.get_dummies(df_feature_col[cat_col])], axis=1)
+                    df_target_col = pd.concat([df_target_col.drop(cat_col,axis=1), pd.get_dummies(df_target_col[cat_col],prefix=cat_col)], axis=1)
+                    df_feature_col = pd.concat([df_feature_col.drop(cat_col,axis=1), pd.get_dummies(df_feature_col[cat_col],prefix=cat_col)], axis=1)
 
             #Get best model
             best_model = self.train(df_target_col, curr_col)
