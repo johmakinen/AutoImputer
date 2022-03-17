@@ -1,17 +1,19 @@
 from pathlib import Path
-print('Running' if __name__ == '__main__' else 'Importing', Path(__file__).resolve())
+
+print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resolve())
 
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
+
 # from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import LabelEncoder
+
 # from src.data_fn.data_process import format_dtypes,replace_infs
-from ..data_fn.data_process import format_dtypes,replace_infs
+from ..data_fn.data_process import format_dtypes, replace_infs
 import pandas as pd
 import numpy as np
 import os
 import warnings
-
 
 
 warnings.filterwarnings("ignore")
@@ -48,7 +50,7 @@ class MySimpleImputer:
         """
         if df.empty:
             return df
-        
+
         imp = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
         idf = pd.DataFrame(imp.fit_transform(replace_infs(df)))
         idf.columns = df.columns
@@ -100,16 +102,20 @@ class XGBImputer:
         # This is because we dont want our imputations of one column
         # to affect the imputations of other columns.
         # This can be changed later if we want such behaviour.
-        
+
         curr_df = replace_infs(df.copy())
         result = curr_df.copy()
 
         nan_cols = df.columns[df.isna().any()].tolist()
-        cat_cols = [col for col in curr_df.columns if self.dtype_list[col] == "categorical"]
+        cat_cols = [
+            col for col in curr_df.columns if self.dtype_list[col] == "categorical"
+        ]
 
         for curr_col in nan_cols:
-            df_target_col = curr_df.dropna(subset=[curr_col]) # Target has no nans
-            df_feature_col = curr_df[curr_df[curr_col].isnull()] # prediction observations are the ones where target is nan
+            df_target_col = curr_df.dropna(subset=[curr_col])  # Target has no nans
+            df_feature_col = curr_df[
+                curr_df[curr_col].isnull()
+            ] 
 
             # If current column to be imputed is categorical -> encode label
             if curr_col in cat_cols:
@@ -119,19 +125,26 @@ class XGBImputer:
                 df_feature_col[curr_col] = le.fit_transform(df_feature_col[curr_col])
 
             # Dummify rest categorical cols
-            for cat_col in cat_cols: # For all catgorical cols
-                if cat_col != curr_col: # But not current col
+            for cat_col in cat_cols:  # For all catgorical cols
+                if cat_col != curr_col:  # But not current col
                     # Drop cat col in question, and concat the dummified version of that column.
-                    df_target_col = pd.concat([df_target_col.drop(cat_col,axis=1), pd.get_dummies(df_target_col[cat_col],prefix=cat_col)], axis=1)
-                    df_feature_col = pd.concat([df_feature_col.drop(cat_col,axis=1), pd.get_dummies(df_feature_col[cat_col],prefix=cat_col)], axis=1)
+                    df_target_col = pd.concat(
+                        [
+                            df_target_col.drop(cat_col, axis=1),
+                            pd.get_dummies(df_target_col[cat_col], prefix=cat_col),
+                        ],
+                        axis=1,
+                    )
+                    df_feature_col = pd.concat(
+                        [
+                            df_feature_col.drop(cat_col, axis=1),
+                            pd.get_dummies(df_feature_col[cat_col], prefix=cat_col),
+                        ],
+                        axis=1,
+                    )
 
-            #Get best model
+            # Get best model
             best_model = self.train(df_target_col, curr_col)
-
-            # These are the features to use for prediction (where target has nan)
-            # X_to_fill = df_target_col[df_target_col[curr_col].isnull()]
-            # print(X_to_fill.drop(columns=curr_col))
-
             preds = pd.Series(
                 best_model.predict(df_feature_col.drop(columns=curr_col)),
                 index=pd.Index(df_feature_col.index),
@@ -233,17 +246,15 @@ def measure_val_error(df, imputer, n_folds=5):
     """
 
     curr_df = df.dropna(axis=0, how="any").copy()
-    errors = pd.DataFrame(((curr_df-curr_df)**2).mean(axis=0)**(1/2)).T
+    errors = pd.DataFrame(((curr_df - curr_df) ** 2).mean(axis=0) ** (1 / 2)).T
     # n-fold cross validation
     for i in range(n_folds):
         nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
         res = imputer.impute(nans)
-        curr_errors = pd.DataFrame(((res-curr_df)**2).mean(axis=0)**(1/2)).T
-        errors = pd.concat([errors,curr_errors],axis=0)
+        curr_errors = pd.DataFrame(((res - curr_df) ** 2).mean(axis=0) ** (1 / 2)).T
+        errors = pd.concat([errors, curr_errors], axis=0)
 
-    
-    return pd.DataFrame(errors.iloc[1:,:].mean(axis=0)).round(2).to_dict()[0]
-
+    return pd.DataFrame(errors.iloc[1:, :].mean(axis=0)).round(2).to_dict()[0]
 
 
 if __name__ == "__main__":
