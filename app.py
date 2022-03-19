@@ -1,4 +1,3 @@
-# Main code here
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,7 +7,7 @@ from timeit import default_timer as timer
 
 # My modules
 from src.models_fn.imputer_models import MySimpleImputer, XGBImputer, measure_val_error
-from src.data_fn.data_process import test_input_data, format_dtypes
+from src.data_fn.data_process import test_input_data
 
 
 st.set_page_config(
@@ -34,6 +33,26 @@ def convert_df(df):
     """
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode("utf-8")
+
+@st.experimental_memo
+def use_imputer(df,_imputer):
+    """Use an imputer to a dataframe.
+        This is the cached version for Streamlit,
+        to speed up computations.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data
+    imputer : Imputer object with parameters already set
+        Imputer object with parameters already set. E.g. MySimpleImputer(dtype_list=dict{..},strategy='median')
+
+    Returns
+    -------
+    pd.DataFrame
+        Resulting data with missing values imputed. 
+    """
+    return _imputer.impute(df)
 
 
 # call back function -> runs BEFORE the rest of the app
@@ -125,7 +144,7 @@ if GOT_DATA and GOT_DTYPE_LIST:
 
     # Default options:
     strategy = "mean"
-    cv_opt = 3
+    cv_opt = 2
 
     # Select imputing method
     method = st.selectbox("Choose the imputing algorithm", ["SimpleImputer", "XGBoost"])
@@ -139,17 +158,16 @@ if GOT_DATA and GOT_DTYPE_LIST:
         with st.expander("Settings:"):
             cv_opt = st.slider(
                 "Number of folds to use in cross-validation when learning the best parameters.",
-                1,
+                2,
                 5,
-                3,
+                2,
             )
 
     # If selection ready, press "Submit" to impute.
     with st.form(key="my_form"):
         submit_btn = st.form_submit_button(label="Impute!")
         imputer_dict = {
-            "SimpleImputer": MySimpleImputer(
-                dtype_list=dtype_list, strategy=strategy),
+            "SimpleImputer": MySimpleImputer(dtype_list=dtype_list, strategy=strategy),
             "XGBoost": XGBImputer(
                 dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv_opt
             ),
@@ -158,27 +176,31 @@ if GOT_DATA and GOT_DTYPE_LIST:
     if submit_btn:
         start_time = timer()
         imputer = imputer_dict[method]
+        with st.spinner('Imputing missing values...'):
+            res = use_imputer(df,imputer)
+            # res = imputer.impute(df)
         elapsed_time = timer() - start_time
-        res = imputer.impute(df)
         st.write(f"Imputation took {round(elapsed_time,2)} seconds.")
+
+        # Show resulting table and the original data
+        c1, _, c2 = st.columns((3, 0.2, 3))
+        with c1:
+            st.subheader("Resulting data")
+            st.write(res)
+        with c2:
+            st.subheader("Original data")
+            st.write(df)
 
         # Measure validation error
         with st.expander("Validation error"):
-            st.write("""Currently error for numeric features is measured as Root Mean Squared Error (RMSE, lower is better),    
-                        For categorical features the measure is accuracy (F1_score, higher is better)""")
+            st.write(
+                """Currently error for numeric features is measured as Root Mean Squared Error (RMSE, lower is better),    
+                        For categorical features the measure is accuracy (F1_score, higher is better)"""
+            )
             n_folds = 5
-            # error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
-            error = measure_val_error(df, imputer=imputer, dtype_list=dtype_list, n_folds=5)
+            with st.spinner('Validating...'):
+                error = measure_val_error(df, imputer=imputer, n_folds=5)
             st.write(error)
-
-    # Show resulting table and the original data
-    c1, _, c2 = st.columns((3, 0.2, 3))
-    with c1:
-        st.subheader("Resulting data")
-        st.write(res)
-    with c2:
-        st.subheader("Original data")
-        st.write(df)
 
     # Give ability to download resulting data.
     csv = convert_df(res)

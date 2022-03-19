@@ -4,13 +4,12 @@ print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resol
 
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import mean_squared_error,f1_score
+from sklearn.metrics import mean_squared_error, f1_score
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 from ..data_fn.data_process import replace_infs
 import pandas as pd
 import numpy as np
-import os
 import warnings
 
 
@@ -62,16 +61,14 @@ class MySimpleImputer:
 
         if num_cols:
             imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-            idf.loc[:,num_cols] = pd.DataFrame(
-                imp_num.fit_transform(replace_infs(idf[num_cols])),
-                index=idf.index,
+            idf.loc[:, num_cols] = pd.DataFrame(
+                imp_num.fit_transform(replace_infs(idf[num_cols])), index=idf.index,
             ).values
 
         if cat_cols:
             imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
-            idf.loc[:,cat_cols] = pd.DataFrame(
-                imp_cat.fit_transform(replace_infs(idf[cat_cols])),
-                index=idf.index,
+            idf.loc[:, cat_cols] = pd.DataFrame(
+                imp_cat.fit_transform(replace_infs(idf[cat_cols])), index=idf.index,
             ).values
 
         idf.columns = df.columns
@@ -287,30 +284,37 @@ def measure_val_error(df, imputer, n_folds=5):
 
     """
 
-
     curr_df = replace_infs(df.dropna(axis=0, how="any").copy())
 
     if curr_df.empty:
-        return dict(zip(curr_df.columns, [0]*len(curr_df.columns)))
+        return dict(zip(curr_df.columns, [0] * len(curr_df.columns)))
 
     errors = pd.DataFrame(columns=curr_df.columns)
     # n-fold cross validation
     for i in range(n_folds):
-        fold_error = pd.DataFrame(0,columns=curr_df.columns,index=range(1))
+        fold_error = pd.DataFrame(0, columns=curr_df.columns, index=range(1))
 
         nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
         res = imputer.impute(nans)
 
         for curr_col in curr_df.columns:
-            if imputer.dtype_list[curr_col] == 'numeric':
-                fold_error.loc[0,curr_col] = mean_squared_error(y_true=curr_df[curr_col].values,y_pred=res[curr_col].values,squared=False)
-            elif imputer.dtype_list[curr_col] == 'categorical':
+            if imputer.dtype_list[curr_col] == "numeric":
+                fold_error.loc[0, curr_col] = mean_squared_error(
+                    y_true=curr_df[curr_col].values,
+                    y_pred=res[curr_col].values,
+                    squared=False,
+                )
+            elif imputer.dtype_list[curr_col] == "categorical":
                 # F1 = 2 * (precision * recall) / (precision + recall)
                 if len(pd.unique(curr_df[curr_col])) > 2:
-                    average='micro'
+                    average = "micro"
                 else:
-                    average = 'binary'
-                fold_error.loc[0,curr_col] = f1_score(y_true=curr_df[curr_col].values,y_pred=res[curr_col].values,average=average)
+                    average = "binary"
+                fold_error.loc[0, curr_col] = f1_score(
+                    y_true=curr_df[curr_col].values,
+                    y_pred=res[curr_col].values,
+                    average=average,
+                )
 
         errors = pd.concat([errors, fold_error], axis=0)
 
@@ -319,26 +323,4 @@ def measure_val_error(df, imputer, n_folds=5):
 
 if __name__ == "__main__":
     pass
-    # # Load data
-    # path_project = os.path.abspath(os.path.join(__file__, "../../.."))
-    # path_processed_data = path_project + "/data/processed/"
-    # data = pd.read_csv(path_processed_data + "iris_nans.csv")
 
-    # # nää pitää tehdä inputille
-    # dtypes = ["numeric", "numeric", "numeric", "numeric", "categorical"]
-    # cols = data.columns
-    # dtype_list = dict(zip(cols, dtypes))
-
-    # # Implementoi tämä -> app.py
-    # # imp = MySimpleImputer()
-    # # res = imp.impute(data)
-
-    # imp = XGBImputer(dtype_list=dtype_list, random_seed=42, verbose=0, cv=1)
-    # res = imp.impute(data)
-    # print(data.head(10))
-    # print(res.head(10))
-    # error_ = measure_val_error(data,imp,n_folds=1)
-    # print(error_)
-    # print(res['target'].value_counts())
-
-    # python -m src.models_fn.imputer_models

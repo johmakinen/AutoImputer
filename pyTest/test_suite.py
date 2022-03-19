@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from src.models_fn.imputer_models import MySimpleImputer, XGBImputer,measure_val_error
+from src.models_fn.imputer_models import MySimpleImputer, XGBImputer, measure_val_error
 from src.data_fn.data_process import simulate_missing_values
 import random
 import string
@@ -40,7 +40,6 @@ def get_test_data():
         for col in cat_cols:
             n_classes = np.random.randint(low=2, high=5)
             curr_df[col] = pd.Series(
-                # np.random.choice(a=[*range(0, n_classes)], size=curr_df.shape[0]),
                 # Need to make sure the column has at least two classes
                 np.append(
                     np.random.choice(
@@ -78,7 +77,7 @@ def get_test_data():
     "imputer, test_data",
     [
         (MySimpleImputer(dtype_list=None, strategy="mean"), get_test_data()),
-        (XGBImputer(dtype_list=None, cv=2), get_test_data())
+        (XGBImputer(dtype_list=None, cv=2), get_test_data()),
     ],
     ids=["SimpleImputer", "XGBImputer"],
 )
@@ -105,9 +104,7 @@ def test_imputer(imputer, test_data):
 
 @pytest.mark.parametrize(
     "imputer, test_data",
-    [
-        (MySimpleImputer(dtype_list=None, strategy="mean"), get_test_data()),
-        ],
+    [(MySimpleImputer(dtype_list=None, strategy="mean"), get_test_data()),],
     ids=["SimpleImputer"],
 )
 def test_validation_error(imputer, test_data):
@@ -118,12 +115,9 @@ def test_validation_error(imputer, test_data):
         df = curr[0]
         dtypes = curr[1]
         imputer.dtype_list = dict(zip(df.columns, dtypes))
-        errors = measure_val_error(df,imputer=imputer,n_folds=2)
+        errors = measure_val_error(df, imputer=imputer, n_folds=2)
 
-        assert len(errors) == len(df.columns) # All features have errors
-
-
-
+        assert len(errors) == len(df.columns)  # All features have errors
 
 
 # Instructions:

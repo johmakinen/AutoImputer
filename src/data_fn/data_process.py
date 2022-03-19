@@ -3,7 +3,6 @@ from pathlib import Path
 print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resolve())
 
 from sklearn import datasets
-from sklearn.preprocessing import LabelEncoder
 import pandas as pd
 import numpy as np
 import os
