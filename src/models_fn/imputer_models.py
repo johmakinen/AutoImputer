@@ -4,7 +4,7 @@ print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resol
 
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
-
+from sklearn.metrics import mean_squared_error,f1_score
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 from ..data_fn.data_process import replace_infs
@@ -31,7 +31,7 @@ class MySimpleImputer:
         ----------
         dtype_list: dict
             A dict that shows what type of data each column has:
-            {column_name_1:'numerical',column_name_2:'categorical',...}
+            {column_name_1:'numeric',column_name_2:'categorical',...}
         strategy : str, optional
             What strategy to use, by default 'mean'
             Other options: mean, median or most_frequent.
@@ -63,12 +63,14 @@ class MySimpleImputer:
         if num_cols:
             imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
             idf[num_cols] = pd.DataFrame(
-                imp_num.fit_transform(replace_infs(idf[num_cols]))
+                imp_num.fit_transform(replace_infs(idf[num_cols])),
+                index=idf.index
             )
         if cat_cols:
             imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
             idf[cat_cols] = pd.DataFrame(
-                imp_cat.fit_transform(replace_infs(idf[cat_cols]))
+                imp_cat.fit_transform(replace_infs(idf[cat_cols])),
+                index=idf.index
             )
 
         idf.columns = df.columns
@@ -80,14 +82,14 @@ class XGBImputer:
     """Imputing class that uses XGBoost for each column that has missing values.
     """
 
-    def __init__(self, dtype_list, random_seed=42, verbose=0, cv=1):
+    def __init__(self, dtype_list, random_seed=42, verbose=0, cv=2):
         """Initialise imputer
 
         Parameters
         ----------
         dtype_list : dict
             A dict that shows what type of data each column has:
-            {column_name_1:'numerical',column_name_2:'categorical',...}
+            {column_name_1:'numeric',column_name_2:'categorical',...}
         random_seed : int, optional
             , by default 42
         verbose : int, optional
@@ -290,12 +292,27 @@ def measure_val_error(df, imputer, dtype_list, n_folds=5):
     errors = pd.DataFrame(columns=curr_df.columns)
     # n-fold cross validation
     for i in range(n_folds):
+        fold_error = pd.DataFrame(0,columns=curr_df.columns,index=range(1))
+
         nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
         res = imputer.impute(nans)
-        curr_errors = pd.DataFrame(((res - curr_df) ** 2).mean(axis=0) ** (1 / 2)).T
-        errors = pd.concat([errors, curr_errors], axis=0)
 
-    return pd.DataFrame(errors.iloc[1:, :].mean(axis=0)).round(2).to_dict()[0]
+        for curr_col in curr_df.columns:
+            if dtype_list[curr_col] == 'numeric':
+                fold_error.loc[0,curr_col] = mean_squared_error(y_true=curr_df[curr_col].values,y_pred=res[curr_col].values,squared=False)
+            elif dtype_list[curr_col] == 'categorical':
+                # F1 = 2 * (precision * recall) / (precision + recall)
+                if len(pd.unique(res[curr_col])) > 2:
+                    average='micro'
+                else:
+                    average = 'binary'
+                fold_error.loc[0,curr_col] = f1_score(y_true=curr_df[curr_col].values,y_pred=res[curr_col].values,average=average)
+
+
+        # curr_errors = pd.DataFrame(((res - curr_df) ** 2).mean(axis=0) ** (1 / 2)).T
+        errors = pd.concat([errors, fold_error], axis=0)
+
+    return pd.DataFrame(errors.mean(axis=0)).round(2).to_dict()[0]
 
 
 if __name__ == "__main__":
