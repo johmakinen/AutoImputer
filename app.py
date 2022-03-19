@@ -34,8 +34,9 @@ def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode("utf-8")
 
+
 @st.experimental_memo
-def use_imputer(df,_imputer):
+def use_imputer(df, _imputer):
     """Use an imputer to a dataframe.
         This is the cached version for Streamlit,
         to speed up computations.
@@ -111,7 +112,13 @@ if uploaded_file:
             + str(int(val_df["prop_missing"] * 100))
             + "%)"
         )
-        FILE_OK = 0
+        FILE_OK = 1
+    if val_df["n_full_nan_rows"]:
+        st.warning(
+            "Warning: Rows with all missing values found in the input data. Removing these rows.."
+        )
+        df.dropna(how="all", inplace=True)
+        FILE_OK = 1
     if FILE_OK:
         st.markdown("### Data preview")
         st.dataframe(df[pd.isnull(df).any(axis=1)].head())
@@ -176,8 +183,8 @@ if GOT_DATA and GOT_DTYPE_LIST:
     if submit_btn:
         start_time = timer()
         imputer = imputer_dict[method]
-        with st.spinner('Imputing missing values...'):
-            res = use_imputer(df,imputer)
+        with st.spinner("Imputing missing values..."):
+            res = use_imputer(df, imputer)
             # res = imputer.impute(df)
         elapsed_time = timer() - start_time
         st.write(f"Imputation took {round(elapsed_time,2)} seconds.")
@@ -198,7 +205,7 @@ if GOT_DATA and GOT_DTYPE_LIST:
                         For categorical features the measure is accuracy (F1_score, higher is better)"""
             )
             n_folds = 5
-            with st.spinner('Validating...'):
+            with st.spinner("Validating..."):
                 error = measure_val_error(df, imputer=imputer, n_folds=5)
             st.write(error)
 

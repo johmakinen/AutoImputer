@@ -157,7 +157,6 @@ class XGBImputer:
                     [df_with_dummies, encoded_data], axis=1
                 ).drop(columns=cat_cols_no_curr_col)
 
-            # curr_df_with_dummies = curr_df.copy()
             df_train = df_with_dummies.dropna(
                 subset=[curr_col]
             ).copy()  # Target has no nans
