@@ -28,11 +28,11 @@ A way to impute missing values using a Streamlit app
 - [x] simpleimputer categorical support
 - [x] categorical data measure error
 - [x] cache xgboost results
-- [ ] add pure numeric and pure categorical test_dataset to test_suite
-- [ ] profile code (own .py file for imputing xgb, try to speedup)
+- [x] add pure numeric and pure categorical test_dataset to test_suite
 - [x] XGBImputer has some WETWET code when wrangling the x_train,x_test data (dummifying), fix this
 - [x] 'format_dtypes" function: reformat to only give dtypes_list. Do not change data
 - [x] Test if input data has rows with all missing values -> remove from data + warning
+- [ ] profile code (own .py file for imputing xgb, try to speedup)
 - [ ] Visualize results/val_errors using plotly
 - [ ] Github README
 - [ ] Make everything nice looking
