@@ -113,13 +113,13 @@ if GOT_DATA:
         reset = st.button("Set columns again", on_click=reset_button)
 
 
-FORMATTED_DATA = 0
+GOT_DTYPE_LIST = 0
 if GOT_DATA and submit_cols:
-    df, dtype_list = format_dtypes(df, dtypes, cols)
-    FORMATTED_DATA = 1
+    dtype_list = dict(zip(cols, dtypes))
+    GOT_DTYPE_LIST = 1
 
 
-if GOT_DATA and FORMATTED_DATA:
+if GOT_DATA and GOT_DTYPE_LIST:
     res = df.copy()
     st.markdown("### Imputer selection and settings")
 

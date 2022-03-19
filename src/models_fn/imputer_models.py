@@ -5,11 +5,9 @@ print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resol
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
 
-# from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-# from src.data_fn.data_process import format_dtypes,replace_infs
-from ..data_fn.data_process import format_dtypes, replace_infs
+from ..data_fn.data_process import replace_infs
 import pandas as pd
 import numpy as np
 import os
@@ -81,6 +79,7 @@ class XGBImputer:
         self.random_seed = random_seed
         self.verbose = verbose
         self.cv = cv
+        self.le_name_mapping = None
 
     def impute(self, df):
         """Impute with XGBoost
@@ -97,6 +96,7 @@ class XGBImputer:
         """
         if df.empty:
             return df
+        # df.dropna(axis=0,how='all',inplace=True)
 
         # We want to keep separate the results and the current data.
         # This is because we dont want our imputations of one column
@@ -112,43 +112,59 @@ class XGBImputer:
         ]
 
         for curr_col in nan_cols:
-            df_target_col = curr_df.dropna(subset=[curr_col])  # Target has no nans
-            df_feature_col = curr_df[curr_df[curr_col].isnull()]
+
+            cat_cols_no_curr_col = list(filter(lambda x: x != curr_col, cat_cols))
+            df_with_dummies = curr_df.copy()
+
+            if cat_cols_no_curr_col:
+
+                # Dummify categorical columns
+                oe = OneHotEncoder(sparse=False, handle_unknown="ignore", dtype="int")
+
+                # Exclude curr_col
+                transformed_data = oe.fit_transform(
+                    df_with_dummies[cat_cols_no_curr_col]
+                )
+
+                # the above transformed_data is an array so convert it to dataframe
+                encoded_data = pd.DataFrame(
+                    transformed_data, index=df_with_dummies.index
+                )
+
+                # now concatenate the original data and the encoded data using pandas
+                # Drop the non-onehotencoded categorical columns excluding curr_col.
+                df_with_dummies = pd.concat(
+                    [df_with_dummies, encoded_data], axis=1
+                ).drop(columns=cat_cols_no_curr_col)
+
+            # curr_df_with_dummies = curr_df.copy()
+            df_train = df_with_dummies.dropna(
+                subset=[curr_col]
+            ).copy()  # Target has no nans
+            df_test = df_with_dummies[df_with_dummies[curr_col].isnull()].copy()
 
             # If current column to be imputed is categorical -> encode label
             if curr_col in cat_cols:
                 # Encode label
                 le = LabelEncoder()
-                df_target_col[curr_col] = le.fit_transform(df_target_col[curr_col])
-                df_feature_col[curr_col] = le.fit_transform(df_feature_col[curr_col])
-
-            # Dummify rest categorical cols
-            for cat_col in cat_cols:  # For all catgorical cols
-                if cat_col != curr_col:  # But not current col
-                    # Drop cat col in question, and concat the dummified version of that column.
-                    df_target_col = pd.concat(
-                        [
-                            df_target_col.drop(cat_col, axis=1),
-                            pd.get_dummies(df_target_col[cat_col], prefix=cat_col),
-                        ],
-                        axis=1,
-                    )
-                    df_feature_col = pd.concat(
-                        [
-                            df_feature_col.drop(cat_col, axis=1),
-                            pd.get_dummies(df_feature_col[cat_col], prefix=cat_col),
-                        ],
-                        axis=1,
-                    )
+                df_train.loc[:, curr_col] = le.fit_transform(df_train[curr_col])
+                self.le_name_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
 
             # Get best model
-            best_model = self.train(df_target_col, curr_col)
+            best_model = self.train(df_train, curr_col)
+
+            # Predict values
             preds = pd.Series(
-                best_model.predict(df_feature_col.drop(columns=curr_col)),
-                index=pd.Index(df_feature_col.index),
+                best_model.predict(df_test.drop(columns=curr_col)),
+                index=pd.Index(df_test.index),
             )
 
+            # Filling missing values with predicted values
             result[curr_col] = result[curr_col].fillna(preds)
+
+            # # Map categorical targets back to original labels
+            if curr_col in cat_cols:
+                result[curr_col] = result[curr_col].map(self.le_name_mapping)
 
         return result
 
@@ -175,13 +191,13 @@ class XGBImputer:
         # Choose type of model:
 
         if self.dtype_list[curr_col] == "numeric":
-            model = xgb.XGBRegressor()
-            scoring = "neg_mean_squared_error"
+            model = xgb.XGBRegressor(eval_metric="rmse")
+            scoring = "neg_root_mean_squared_error"
             param_grid = {
                 "booster": ["gbtree"],
                 "max_depth": [4, 6, 8],
-                "alpha": [1, 5, 10],
-                "lambda": [0, 3, 5],
+                "alpha": [0, 3],
+                "lambda": [1, 3],
                 "learning_rate": [0.5],
             }
 
@@ -190,29 +206,33 @@ class XGBImputer:
             classes = pd.unique(y_train)
             n_classes = len(classes)
             param_grid = {
-                "learning_rate": [0.25, 0.3, 0.4],
+                "learning_rate": [0.5],
                 "max_depth": [4, 6, 8],
-                "subsample": [0.1, 0.5, 1],
-                "colsample_bytree": [0.1, 0.5, 1],
-                "n_estimators": [10, 50, 100],
+                "subsample": [0.5, 1],
+                "colsample_bytree": [0.5, 1],
             }
 
             if n_classes == 2:
-                model.set_params(objective="binary:logistic")
-                scoring = "roc_auc"
+                model.set_params(objective="binary:logistic", eval_metric="logloss")
+                scoring = "neg_log_loss"
 
             else:
-                model.set_params(objective="multi:softmax", num_class=n_classes)
-                scoring = "f1_micro"
+                model.set_params(
+                    objective="multi:softmax",
+                    num_class=n_classes,
+                    eval_metric="mlogloss",
+                )
+                scoring = "neg_log_loss"
 
         grid_search = RandomizedSearchCV(
             estimator=model,
             param_distributions=param_grid,
             scoring=scoring,
-            n_jobs=-1,
-            cv=5,
+            n_jobs=2,
+            cv=max(2, self.cv),
             refit=True,
             random_state=self.random_seed,
+            error_score="raise",
         )
 
         grid_search.fit(X_train, y_train)
@@ -220,7 +240,7 @@ class XGBImputer:
         return grid_search.best_estimator_
 
 
-def measure_val_error(df, imputer, n_folds=5):
+def measure_val_error(df, imputer,dtype_list, n_folds=5):
     """ Computes the possible error of the imputation.
         Uses N-fold subsampling and averages the errors
         over the folds. At the moment only RMSE for all data
@@ -233,6 +253,8 @@ def measure_val_error(df, imputer, n_folds=5):
         Input data with missing values
     imputer : Custom imputer
         Must have an "impute" method, which returns a dataframe. E.g. SimpleImputer()
+    dtype_list : dict
+        Dict which shows whether a feature is numeric or categorical.
     n_folds : int, optional
         Number of N-folds to perform, by default 5
 
@@ -240,6 +262,7 @@ def measure_val_error(df, imputer, n_folds=5):
     -------
     dict
         Mean RMSE error for each column as a dict
+        For categorical values use 
 
     """
 
@@ -256,24 +279,27 @@ def measure_val_error(df, imputer, n_folds=5):
 
 
 if __name__ == "__main__":
+    pass
+    # # Load data
+    # path_project = os.path.abspath(os.path.join(__file__, "../../.."))
+    # path_processed_data = path_project + "/data/processed/"
+    # data = pd.read_csv(path_processed_data + "iris_nans.csv")
 
-    # Load data
-    path_project = os.path.abspath(os.path.join(__file__, "../../.."))
-    path_processed_data = path_project + "/data/processed/"
-    data = pd.read_csv(path_processed_data + "iris_nans.csv")
+    # # nää pitää tehdä inputille
+    # dtypes = ["numeric", "numeric", "numeric", "numeric", "categorical"]
+    # cols = data.columns
+    # dtype_list = dict(zip(cols, dtypes))
 
-    # nää pitää tehdä inputille
-    dtypes = ["numeric", "numeric", "numeric", "numeric", "categorical"]
-    cols = data.columns
-    data, dtype_list = format_dtypes(data, dtypes=dtypes, cols=cols)
+    # # Implementoi tämä -> app.py
+    # # imp = MySimpleImputer()
+    # # res = imp.impute(data)
 
-    # Implementoi tämä -> app.py
-    # imp = MySimpleImputer()
+    # imp = XGBImputer(dtype_list=dtype_list, random_seed=42, verbose=0, cv=1)
     # res = imp.impute(data)
-
-    imp = XGBImputer(dtype_list=dtype_list, random_seed=42, verbose=0, cv=1)
-    res = imp.impute(data)
-    print(data.head(10))
-    print(res.head(10))
+    # print(data.head(10))
+    # print(res.head(10))
     # error_ = measure_val_error(data,imp,n_folds=1)
     # print(error_)
+    # print(res['target'].value_counts())
+
+    # python -m src.models_fn.imputer_models

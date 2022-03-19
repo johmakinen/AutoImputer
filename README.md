@@ -21,18 +21,32 @@ A way to impute missing values using a Streamlit app
     - [x] imputation when categorical target has nans
     - At the moment, dummifying all but target -> not working looping only over nan cols. Done [x]
 - [x] Validation error for each column separately, use st.expander in app.py
+- [x] Pytest:
+    -  Feature shape mismatch, expected: 6, got 7 
+    -  contains infs (in categorical col?) --> This is low prio
+    -  categorical dummifying not working -> need fix asap
 - [ ] categorical data measure error
 - [ ] cache xgboost results
-- [ ] XGBImputer has some WETWET code when wrangling the x_train,x_test data (dummifying), fix this
-- [ ] 'format_dtypes" function: reformat to only give dtypes_list. Do not change data
+- [ ] profile code (own .py file for imputing xgb, try to speedup)
+- [x] XGBImputer has some WETWET code when wrangling the x_train,x_test data (dummifying), fix this
+- [x] 'format_dtypes" function: reformat to only give dtypes_list. Do not change data
 - [ ] Test if input data has rows with all missing values -> remove from data + warning
 - [ ] Visualize results/val_errors using plotly
 - [ ] Github README
-- [ ] Can we make XGBoost faster?
+- [ ] PyTorch LSTM/RNN/CNN/???
+    - Read up on what to use
+    - Choose one method, implement it
+    - tests
 - [ ] Make everything nice looking
     - [ ] Add intoduction
     - [ ] Add explanations using st.expander to everything
     - [ ] Change theme
+- [ ] Is XGBoost updated? -> update to get rid of FutureWarning.
+    - [ ] Also if available, cateogircal support -> no one-hot encoding!
+- [ ] what if contains infs in categorical col --> This is low prio
 - [ ] Add to portfolio
+
+
+
 
 

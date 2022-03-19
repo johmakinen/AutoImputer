@@ -1,5 +1,6 @@
 from pathlib import Path
-print('Running' if __name__ == '__main__' else 'Importing', Path(__file__).resolve())
+
+print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resolve())
 
 from sklearn import datasets
 from sklearn.preprocessing import LabelEncoder
@@ -100,35 +101,6 @@ def replace_infs(df):
     m2 = df.eq(-np.inf)
     df = df.mask(m1, df[~m1].max(), axis=1).mask(m2, df[~m2].min(), axis=1)
     return df
-
-def format_dtypes(df, dtypes, cols):
-    """Format the dtypes of our data to be
-        compatible with complex imputers (such as XGBoost) 
-
-    Parameters
-    ----------
-    df : pd.DataFrame   
-        Input data
-    dtypes : list
-            "dtypes" of the columns.
-            For example ['numeric','numeric','categorical']
-            These are given by the user manually
-    cols : list or np.array
-        names of the columns in the same order as dtypes list
-
-    Returns
-    -------
-    pd.DataFrame, dict
-        Returns the formatted data, the dict that can be used to determine the "dtype" of a column.
-    """
-
-    # Encode categorical values
-    dtype_list = dict(zip(cols, dtypes))
-    categorical_columns = [col for col in cols if dtype_list[col] == "categorical"]
-    # le = LabelEncoder()
-    # df[categorical_columns] = df[categorical_columns].apply(le.fit_transform)
-    df[categorical_columns] = df[categorical_columns].astype("category")
-    return df, dtype_list
 
 
 if __name__ == "__main__":
