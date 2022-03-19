@@ -34,6 +34,7 @@ A way to impute missing values using a Streamlit app
 - [x] Test if input data has rows with all missing values -> remove from data + warning
 - [x] profile code (own .py file for imputing xgb, try to speedup) -> did some speedup, but gridsearch is a huge bottleneck
 - [x] Visualize data preview
+- [ ] Add error if some column completely empty -> imputing wont work.
 - [ ] Github README
 - [ ] Make everything nice looking
     - [ ] Add intoduction
@@ -41,6 +42,8 @@ A way to impute missing values using a Streamlit app
     - [ ] Change theme
 - [ ] Is XGBoost updated? -> update to get rid of FutureWarning.
     - [ ] Also if available, cateogircal support -> no one-hot encoding!
+- [ ] get test data from kaggle/oecd/eu databank etc..
+    -[ ] Create own pyTests for these data.
 - [ ] Deploy on Streamlit Cloud
 - [ ] Add to portfolio
 - [ ] PyTorch LSTM/RNN/CNN/???

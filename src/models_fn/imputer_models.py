@@ -188,12 +188,12 @@ class XGBImputer:
         return result
 
     def train(self, df, curr_col):
-        """Train XGBoost model
+        """Train XGBoost model using RandomizedSearchCV.
 
         Parameters
         ----------
         df : pd.DataFrame
-            Data to be imputed
+            Data to be imputed (training data)
         curr_col : _type_
             What column is currently being imputed
 
@@ -247,7 +247,7 @@ class XGBImputer:
             estimator=model,
             param_distributions=param_grid,
             scoring=scoring,
-            n_jobs=2,
+            n_jobs=1,
             cv=max(2, self.cv),
             refit=True,
             random_state=self.random_seed,

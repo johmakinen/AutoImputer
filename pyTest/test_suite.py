@@ -16,11 +16,11 @@ def get_test_data():
 
     list[(data,dtypes)]
     """
-    max_size = 12
+    max_size = 10
     test_set = []
     letters = string.ascii_lowercase
 
-    for size in range(4, max_size, 2):
+    for size in range(2, max_size, 2):
         # Random column names
         col_names = [
             "".join(random.choice(letters) for i in range(10)) for x in range(size)
@@ -53,7 +53,7 @@ def get_test_data():
 
         # Simulate missing values
         curr_df = simulate_missing_values(
-            curr_df, output_name=None, prop=np.random.random()
+            curr_df, output_name=None, prop=np.random.uniform(low=0.05,high=0.7)
         )
 
         # Add a few np.inf values to random dataframes,
