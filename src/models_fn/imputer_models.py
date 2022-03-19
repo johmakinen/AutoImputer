@@ -62,13 +62,13 @@ class MySimpleImputer:
         if num_cols:
             imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
             idf.loc[:, num_cols] = pd.DataFrame(
-                imp_num.fit_transform(replace_infs(idf[num_cols])), index=idf.index,
+                imp_num.fit_transform(idf[num_cols]), index=idf.index,
             ).values
 
         if cat_cols:
             imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
             idf.loc[:, cat_cols] = pd.DataFrame(
-                imp_cat.fit_transform(replace_infs(idf[cat_cols])), index=idf.index,
+                imp_cat.fit_transform(idf[cat_cols]), index=idf.index,
             ).values
 
         idf.columns = df.columns
