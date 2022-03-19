@@ -70,6 +70,22 @@ def get_test_data():
             ] = -np.inf
         test_set.append((curr_df, dtypes))
 
+    # ----------------
+    # Pure numeric data
+    col_names = ["".join(random.choice(letters) for i in range(10)) for x in range(6)]
+    # Initialise all columns as numeric
+    dtypes = ["numeric"] * len(col_names)
+    num_df = pd.DataFrame(
+        np.random.random_sample(size=(6 * np.random.randint(low=6, high=6 * 50), 6)),
+        columns=col_names,
+    )
+    test_set.append((num_df, dtypes))
+
+    # Pure categorical data
+    dtypes = ["categorical"] * len(col_names)
+    cat_df = (num_df * 3).astype("int32")
+    test_set.append((cat_df, dtypes))
+
     return test_set
 
 

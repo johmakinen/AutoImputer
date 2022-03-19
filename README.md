@@ -27,26 +27,25 @@ A way to impute missing values using a Streamlit app
     -  categorical dummifying not working -> need fix asap --> not working
 - [x] simpleimputer categorical support
 - [x] categorical data measure error
-- [ ] cache xgboost results
+- [x] cache xgboost results
 - [ ] add pure numeric and pure categorical test_dataset to test_suite
 - [ ] profile code (own .py file for imputing xgb, try to speedup)
 - [x] XGBImputer has some WETWET code when wrangling the x_train,x_test data (dummifying), fix this
 - [x] 'format_dtypes" function: reformat to only give dtypes_list. Do not change data
-- [ ] Test if input data has rows with all missing values -> remove from data + warning
+- [x] Test if input data has rows with all missing values -> remove from data + warning
 - [ ] Visualize results/val_errors using plotly
 - [ ] Github README
-- [ ] PyTorch LSTM/RNN/CNN/???
-    - Read up on what to use
-    - Choose one method, implement it
-    - tests
 - [ ] Make everything nice looking
     - [ ] Add intoduction
     - [ ] Add explanations using st.expander to everything
     - [ ] Change theme
 - [ ] Is XGBoost updated? -> update to get rid of FutureWarning.
     - [ ] Also if available, cateogircal support -> no one-hot encoding!
-- [ ] what if contains infs in categorical col --> This is low prio
 - [ ] Add to portfolio
+- [ ] PyTorch LSTM/RNN/CNN/???
+    - Read up on what to use
+    - Choose one method, implement it
+    - tests
 
 
 
