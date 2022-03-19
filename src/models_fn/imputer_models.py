@@ -262,12 +262,12 @@ def measure_val_error(df, imputer,dtype_list, n_folds=5):
     -------
     dict
         Mean RMSE error for each column as a dict
-        For categorical values use 
+        For categorical values use ...
 
     """
 
     curr_df = df.dropna(axis=0, how="any").copy()
-    errors = pd.DataFrame(((curr_df - curr_df) ** 2).mean(axis=0) ** (1 / 2)).T
+    errors = pd.DataFrame(columns=curr_df.columns)
     # n-fold cross validation
     for i in range(n_folds):
         nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
