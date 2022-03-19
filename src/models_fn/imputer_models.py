@@ -4,7 +4,7 @@ print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resol
 
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import mean_squared_error, f1_score
+from sklearn.metrics import mean_squared_error, f1_score, log_loss, make_scorer
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 from ..data_fn.data_process import replace_infs
@@ -231,17 +231,17 @@ class XGBImputer:
                 "colsample_bytree": [0.5, 1],
             }
 
+            # I dont like that objectives logloss and mlogloss are used in xgb but f1's are used in grid search
+            # Change this in the future, for now it is ok.
             if n_classes == 2:
-                model.set_params(objective="binary:logistic", eval_metric="logloss")
-                scoring = "neg_log_loss"
+                model.set_params(objective="binary:logistic",)
+                scoring = "f1"
 
             else:
                 model.set_params(
-                    objective="multi:softmax",
-                    num_class=n_classes,
-                    eval_metric="mlogloss",
+                    objective="multi:softmax", num_class=n_classes,
                 )
-                scoring = "neg_log_loss"
+                scoring = "f1_micro"
 
         grid_search = RandomizedSearchCV(
             estimator=model,
@@ -282,10 +282,11 @@ def measure_val_error(df, imputer, n_folds=5):
         For categorical values use ...
 
     """
+    # y_true and y_pred contain different number of classes 2, 3. Please provide the true labels explicitly through the labels argument. Classes found in y_true: [0 2]
+
     curr_df = df.copy()
     curr_df = replace_infs(curr_df)
-    curr_df = curr_df.dropna(axis=0,how='any')
-
+    curr_df = curr_df.dropna(axis=0, how="any")
 
     if curr_df.empty:
         return dict(zip(curr_df.columns, [0] * len(curr_df.columns)))
@@ -306,7 +307,6 @@ def measure_val_error(df, imputer, n_folds=5):
                     squared=False,
                 )
             elif imputer.dtype_list[curr_col] == "categorical":
-                # F1 = 2 * (precision * recall) / (precision + recall)
                 if len(pd.unique(curr_df[curr_col])) > 2:
                     average = "micro"
                 else:

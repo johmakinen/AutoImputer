@@ -32,8 +32,8 @@ A way to impute missing values using a Streamlit app
 - [x] XGBImputer has some WETWET code when wrangling the x_train,x_test data (dummifying), fix this
 - [x] 'format_dtypes" function: reformat to only give dtypes_list. Do not change data
 - [x] Test if input data has rows with all missing values -> remove from data + warning
-- [ ] profile code (own .py file for imputing xgb, try to speedup)
-- [ ] Visualize results/val_errors using plotly
+- [x] profile code (own .py file for imputing xgb, try to speedup) -> did some speedup, but gridsearch is a huge bottleneck
+- [x] Visualize data preview
 - [ ] Github README
 - [ ] Make everything nice looking
     - [ ] Add intoduction
@@ -41,6 +41,7 @@ A way to impute missing values using a Streamlit app
     - [ ] Change theme
 - [ ] Is XGBoost updated? -> update to get rid of FutureWarning.
     - [ ] Also if available, cateogircal support -> no one-hot encoding!
+- [ ] Deploy on Streamlit Cloud
 - [ ] Add to portfolio
 - [ ] PyTorch LSTM/RNN/CNN/???
     - Read up on what to use

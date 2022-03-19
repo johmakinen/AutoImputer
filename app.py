@@ -8,10 +8,11 @@ from timeit import default_timer as timer
 # My modules
 from src.models_fn.imputer_models import MySimpleImputer, XGBImputer, measure_val_error
 from src.data_fn.data_process import test_input_data
+from src.visualization_fn.visuals import plot_na_prop
 
 
 st.set_page_config(
-    page_title="AutoImputer", layout="wide", initial_sidebar_state="auto",
+    page_title="AutoImputer", layout="wide",
 )
 
 # ----------------------------------------------------------------------------------------
@@ -36,25 +37,20 @@ def convert_df(df):
 
 
 @st.experimental_memo
-def use_imputer(df, _imputer):
-    """Use an imputer to a dataframe.
-        This is the cached version for Streamlit,
-        to speed up computations.
+def plot_nas(df):
+    """Plots the missing value proportions for each column.
+        Streamlit's cached version.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Input data
-    imputer : Imputer object with parameters already set
-        Imputer object with parameters already set. E.g. MySimpleImputer(dtype_list=dict{..},strategy='median')
+        Input data  
 
     Returns
     -------
-    pd.DataFrame
-        Resulting data with missing values imputed. 
+    Plotly figure object
     """
-    return _imputer.impute(df)
-
+    return plot_na_prop(df)
 
 # call back function -> runs BEFORE the rest of the app
 def reset_button():
@@ -81,11 +77,8 @@ with t2:
     )
 
 st.write("")
-st.markdown(
-    """Imputing missing values automatically...   
-                _Only numerical data for now_"""
-)
-st.sidebar.title("Settings")
+st.markdown("""Imputing missing values automatically...""")
+# st.sidebar.title("Settings")
 
 
 uploaded_file = st.file_uploader("Upload CSV", type=".csv")
@@ -122,6 +115,8 @@ if uploaded_file:
     if FILE_OK:
         st.markdown("### Data preview")
         st.dataframe(df[pd.isnull(df).any(axis=1)].head())
+        with st.expander("Missing values plotted"):
+            st.plotly_chart(plot_nas(df), use_container_width=True)
         GOT_DATA = 1
 
 if GOT_DATA:
@@ -160,7 +155,9 @@ if GOT_DATA and GOT_DTYPE_LIST:
             strategy = st.radio(
                 "Select imputing method", ("mean", "median", "most_frequent")
             )
-            st.write("Do note that SimpleImputer treats all columns as numeric.")
+            st.write(
+                "Do note that SimpleImputer will use 'most_frequent' strategy for all categorical features."
+            )
     elif method == "XGBoost":
         with st.expander("Settings:"):
             cv_opt = st.slider(
@@ -184,8 +181,8 @@ if GOT_DATA and GOT_DTYPE_LIST:
         start_time = timer()
         imputer = imputer_dict[method]
         with st.spinner("Imputing missing values..."):
-            res = use_imputer(df, imputer)
-            # res = imputer.impute(df)
+            # res = use_imputer(df, imputer)
+            res = imputer.impute(df)
         elapsed_time = timer() - start_time
         st.write(f"Imputation took {round(elapsed_time,2)} seconds.")
 
@@ -199,14 +196,33 @@ if GOT_DATA and GOT_DTYPE_LIST:
             st.write(df)
 
         # Measure validation error
-        with st.expander("Validation error"):
+        with st.expander("Validation metrics"):
             st.write(
-                """Currently error for numeric features is measured as Root Mean Squared Error (RMSE, lower is better),    
-                        For categorical features the measure is accuracy (F1_score, higher is better)"""
+                r"""
+                    #### For numeric features the validation error is measured with Root Mean Squared Error (RMSE).
+                    _(Lower is better)_   
+                    $$ 
+                    RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^n (y_{\text{pred}}-y_{\text{real}})^2}
+                    $$ 
+                    """
+            )
+            st.write(
+                r"""
+                    #### For categorical features the measure is $F_1$ score.
+                    _(higher is better)_   
+                    For binary features
+                    $$ 
+                    F_1 = \frac{\text{true positives}}   {\text{true positives} + \frac{1}{2}(\text{false positives}+\text{false negatives})}
+                    $$ 
+                    For multiclass features micro -averaging is used:
+                    _Micro averaging computes a global average F1 score by counting the sums of the True Positives (TP),
+                     False Negatives (FN), and False Positives (FP). These are then plugged in the above $F_1$ equation._
+                    """
             )
             n_folds = 5
             with st.spinner("Validating..."):
                 error = measure_val_error(df, imputer=imputer, n_folds=5)
+            st.subheader(f"Metrics with {n_folds} folds.")
             st.write(error)
 
     # Give ability to download resulting data.
