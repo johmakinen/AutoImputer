@@ -93,7 +93,7 @@ class XGBImputer:
         verbose : int, optional
             , by default 0
         cv : int, optional
-            Number of cross-validation folds used in hyperparameter optimization, by default 1
+            Number of cross-validation folds used in hyperparameter optimization, by default 2
         """
         self.dtype_list = dtype_list
         self.random_seed = random_seed
@@ -282,8 +282,10 @@ def measure_val_error(df, imputer, n_folds=5):
         For categorical values use ...
 
     """
+    curr_df = df.copy()
+    curr_df = replace_infs(curr_df)
+    curr_df = curr_df.dropna(axis=0,how='any')
 
-    curr_df = replace_infs(df.dropna(axis=0, how="any").copy())
 
     if curr_df.empty:
         return dict(zip(curr_df.columns, [0] * len(curr_df.columns)))

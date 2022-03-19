@@ -16,7 +16,7 @@ def get_test_data():
 
     list[(data,dtypes)]
     """
-    max_size = 16
+    max_size = 12
     test_set = []
     letters = string.ascii_lowercase
 

@@ -97,10 +97,11 @@ def replace_infs(df):
     -------
     pd.DataFrame
     """
-    m1 = df.eq(np.inf)
-    m2 = df.eq(-np.inf)
-    df = df.mask(m1, df[~m1].max(), axis=1).mask(m2, df[~m2].min(), axis=1)
-    return df
+    # m1 = df.eq(np.inf)
+    # m2 = df.eq(-np.inf)
+    # df = df.mask(m1, df[~m1].max(), axis=1).mask(m2, df[~m2].min(), axis=1)
+    res = df.replace([np.inf, -np.inf], np.nan)
+    return res
 
 
 if __name__ == "__main__":
