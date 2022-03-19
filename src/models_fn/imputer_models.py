@@ -56,22 +56,23 @@ class MySimpleImputer:
         if df.empty:
             return df
 
-        idf = df.copy()
+        idf = replace_infs(df.copy())
         num_cols = [k for k in self.dtype_list if self.dtype_list[k] == "numeric"]
         cat_cols = [col for col in idf.columns if col not in num_cols]
 
         if num_cols:
             imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-            idf[num_cols] = pd.DataFrame(
+            idf.loc[:,num_cols] = pd.DataFrame(
                 imp_num.fit_transform(replace_infs(idf[num_cols])),
-                index=idf.index
-            )
+                index=idf.index,
+            ).values
+
         if cat_cols:
             imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
-            idf[cat_cols] = pd.DataFrame(
+            idf.loc[:,cat_cols] = pd.DataFrame(
                 imp_cat.fit_transform(replace_infs(idf[cat_cols])),
-                index=idf.index
-            )
+                index=idf.index,
+            ).values
 
         idf.columns = df.columns
         idf.index = df.index
@@ -262,7 +263,7 @@ class XGBImputer:
         return grid_search.best_estimator_
 
 
-def measure_val_error(df, imputer, dtype_list, n_folds=5):
+def measure_val_error(df, imputer, n_folds=5):
     """ Computes the possible error of the imputation.
         Uses N-fold subsampling and averages the errors
         over the folds. At the moment only RMSE for all data
@@ -275,8 +276,6 @@ def measure_val_error(df, imputer, dtype_list, n_folds=5):
         Input data with missing values
     imputer : Custom imputer
         Must have an "impute" method, which returns a dataframe. E.g. SimpleImputer()
-    dtype_list : dict
-        Dict which shows whether a feature is numeric or categorical.
     n_folds : int, optional
         Number of N-folds to perform, by default 5
 
@@ -288,7 +287,12 @@ def measure_val_error(df, imputer, dtype_list, n_folds=5):
 
     """
 
-    curr_df = df.dropna(axis=0, how="any").copy()
+
+    curr_df = replace_infs(df.dropna(axis=0, how="any").copy())
+
+    if curr_df.empty:
+        return dict(zip(curr_df.columns, [0]*len(curr_df.columns)))
+
     errors = pd.DataFrame(columns=curr_df.columns)
     # n-fold cross validation
     for i in range(n_folds):
@@ -298,18 +302,16 @@ def measure_val_error(df, imputer, dtype_list, n_folds=5):
         res = imputer.impute(nans)
 
         for curr_col in curr_df.columns:
-            if dtype_list[curr_col] == 'numeric':
+            if imputer.dtype_list[curr_col] == 'numeric':
                 fold_error.loc[0,curr_col] = mean_squared_error(y_true=curr_df[curr_col].values,y_pred=res[curr_col].values,squared=False)
-            elif dtype_list[curr_col] == 'categorical':
+            elif imputer.dtype_list[curr_col] == 'categorical':
                 # F1 = 2 * (precision * recall) / (precision + recall)
-                if len(pd.unique(res[curr_col])) > 2:
+                if len(pd.unique(curr_df[curr_col])) > 2:
                     average='micro'
                 else:
                     average = 'binary'
                 fold_error.loc[0,curr_col] = f1_score(y_true=curr_df[curr_col].values,y_pred=res[curr_col].values,average=average)
 
-
-        # curr_errors = pd.DataFrame(((res - curr_df) ** 2).mean(axis=0) ** (1 / 2)).T
         errors = pd.concat([errors, fold_error], axis=0)
 
     return pd.DataFrame(errors.mean(axis=0)).round(2).to_dict()[0]

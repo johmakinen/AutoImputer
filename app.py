@@ -164,9 +164,11 @@ if GOT_DATA and GOT_DTYPE_LIST:
 
         # Measure validation error
         with st.expander("Validation error"):
-            st.write("Currently error is measured as Root Mean Squared Error (RMSE)")
+            st.write("""Currently error for numeric features is measured as Root Mean Squared Error (RMSE, lower is better),    
+                        For categorical features the measure is accuracy (F1_score, higher is better)""")
             n_folds = 5
-            error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
+            # error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
+            error = measure_val_error(df, imputer=imputer, dtype_list=dtype_list, n_folds=5)
             st.write(error)
 
     # Show resulting table and the original data

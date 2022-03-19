@@ -22,12 +22,13 @@ A way to impute missing values using a Streamlit app
     - At the moment, dummifying all but target -> not working looping only over nan cols. Done [x]
 - [x] Validation error for each column separately, use st.expander in app.py
 - [x] Pytest:
-    -  Feature shape mismatch, expected: 6, got 7 
-    -  contains infs (in categorical col?) --> This is low prio
-    -  categorical dummifying not working -> need fix asap
+    -  Feature shape mismatch, expected: 6, got 7  -> dummifying was not working as expected -> pd.dummies -> onehotencoder.
+    -  contains infs (in categorical col?) --> This is low prio -> Fixed, didnt use replace_infs before...
+    -  categorical dummifying not working -> need fix asap --> not working
 - [x] simpleimputer categorical support
-- [ ] categorical data measure error
+- [x] categorical data measure error
 - [ ] cache xgboost results
+- [ ] add pure numeric and pure categorical test_dataset to test_suite
 - [ ] profile code (own .py file for imputing xgb, try to speedup)
 - [x] XGBImputer has some WETWET code when wrangling the x_train,x_test data (dummifying), fix this
 - [x] 'format_dtypes" function: reformat to only give dtypes_list. Do not change data

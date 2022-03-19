@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from src.models_fn.imputer_models import MySimpleImputer, XGBImputer
+from src.models_fn.imputer_models import MySimpleImputer, XGBImputer,measure_val_error
 from src.data_fn.data_process import simulate_missing_values
 import random
 import string
@@ -13,15 +13,14 @@ def get_test_data():
 
     Returns
     -------
-    list[(pd.DataFrame,(int,int),Boolean)]
 
     list[(data,dtypes)]
     """
-    max_size = 15
+    max_size = 16
     test_set = []
     letters = string.ascii_lowercase
 
-    for size in range(5, max_size, 5):
+    for size in range(4, max_size, 2):
         # Random column names
         col_names = [
             "".join(random.choice(letters) for i in range(10)) for x in range(size)
@@ -79,7 +78,7 @@ def get_test_data():
     "imputer, test_data",
     [
         (MySimpleImputer(dtype_list=None, strategy="mean"), get_test_data()),
-        (XGBImputer(dtype_list=None, cv=2), get_test_data()),
+        (XGBImputer(dtype_list=None, cv=2), get_test_data())
     ],
     ids=["SimpleImputer", "XGBImputer"],
 )
@@ -95,18 +94,39 @@ def test_imputer(imputer, test_data):
     for curr in test_data:
         df = curr[0]
         dtypes = curr[1]
-        res = df.copy()
-
         imputer.dtype_list = dict(zip(df.columns, dtypes))
 
-        res = imputer.impute(res)
+        res = imputer.impute(df)
 
         assert df.shape == res.shape  # Shape is not changed
         assert df.empty == res.empty  # If input is empty, output is empty
         assert res.isnull().sum().sum() == 0  # All missing values filled
 
 
+@pytest.mark.parametrize(
+    "imputer, test_data",
+    [
+        (MySimpleImputer(dtype_list=None, strategy="mean"), get_test_data()),
+        ],
+    ids=["SimpleImputer"],
+)
+def test_validation_error(imputer, test_data):
+    """Test the computation of validation error
+        Simple test that each column gets an error/accuracy score
+    """
+    for curr in test_data:
+        df = curr[0]
+        dtypes = curr[1]
+        imputer.dtype_list = dict(zip(df.columns, dtypes))
+        errors = measure_val_error(df,imputer=imputer,n_folds=2)
+
+        assert len(errors) == len(df.columns) # All features have errors
+
+
+
+
+
 # Instructions:
 # Run testsuite from the main directory.
-# python -m pytest -r pyTest\test_imputers.py #from main dir
-# python -m pytest -p no:warnings -r pyTest\test_imputers.py
+# python -m pytest -r pyTest\test_suite.py #from main dir
+# python -m pytest -p no:warnings -r pyTest\test_suite.py
