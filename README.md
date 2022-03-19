@@ -25,7 +25,7 @@ A way to impute missing values using a Streamlit app
     -  Feature shape mismatch, expected: 6, got 7 
     -  contains infs (in categorical col?) --> This is low prio
     -  categorical dummifying not working -> need fix asap
-- [ ] simpleimputer categorical support
+- [x] simpleimputer categorical support
 - [ ] categorical data measure error
 - [ ] cache xgboost results
 - [ ] profile code (own .py file for imputing xgb, try to speedup)

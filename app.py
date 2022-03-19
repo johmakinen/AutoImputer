@@ -148,7 +148,8 @@ if GOT_DATA and GOT_DTYPE_LIST:
     with st.form(key="my_form"):
         submit_btn = st.form_submit_button(label="Impute!")
         imputer_dict = {
-            "SimpleImputer": MySimpleImputer(strategy=strategy),
+            "SimpleImputer": MySimpleImputer(
+                dtype_list=dtype_list, strategy=strategy),
             "XGBoost": XGBImputer(
                 dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv_opt
             ),
@@ -162,8 +163,8 @@ if GOT_DATA and GOT_DTYPE_LIST:
         st.write(f"Imputation took {round(elapsed_time,2)} seconds.")
 
         # Measure validation error
-        with st.expander('Validation error'):
-            st.write('Currently error is measured as Root Mean Squared Error (RMSE)')
+        with st.expander("Validation error"):
+            st.write("Currently error is measured as Root Mean Squared Error (RMSE)")
             n_folds = 5
             error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
             st.write(error)

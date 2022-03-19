@@ -75,11 +75,15 @@ def get_test_data():
     return test_set
 
 
-@pytest.mark.parametrize("imputer, test_data",
-                         [(MySimpleImputer(strategy="mean"), get_test_data()),
-                          (XGBImputer(dtype_list=None, cv=2), get_test_data())],
-                          ids=['SimpleImputer','XGBImputer'])
-def test_imputer(imputer,test_data):
+@pytest.mark.parametrize(
+    "imputer, test_data",
+    [
+        (MySimpleImputer(dtype_list=None, strategy="mean"), get_test_data()),
+        (XGBImputer(dtype_list=None, cv=2), get_test_data()),
+    ],
+    ids=["SimpleImputer", "XGBImputer"],
+)
+def test_imputer(imputer, test_data):
     """Tests that an imputer works as intended
 
     | Current tests:    
@@ -87,20 +91,20 @@ def test_imputer(imputer,test_data):
         | 2. If input is empty, output should be empty  
         | 3. All missing values are filled  
     """
-    
+
     for curr in test_data:
         df = curr[0]
         dtypes = curr[1]
         res = df.copy()
 
-        if 'XGB' in str(imputer.__class__):
-            imputer.dtype_list = dict(zip(df.columns, dtypes))
+        imputer.dtype_list = dict(zip(df.columns, dtypes))
 
         res = imputer.impute(res)
 
         assert df.shape == res.shape  # Shape is not changed
         assert df.empty == res.empty  # If input is empty, output is empty
         assert res.isnull().sum().sum() == 0  # All missing values filled
+
 
 # Instructions:
 # Run testsuite from the main directory.

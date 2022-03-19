@@ -22,16 +22,22 @@ class MySimpleImputer:
     """ A Class for the simple imputer.
     """
 
-    def __init__(self, strategy="mean"):
+    def __init__(
+        self, dtype_list, strategy="mean",
+    ):
         """Initialise imputer
 
         Parameters
         ----------
+        dtype_list: dict
+            A dict that shows what type of data each column has:
+            {column_name_1:'numerical',column_name_2:'categorical',...}
         strategy : str, optional
             What strategy to use, by default 'mean'
             Other options: mean, median or most_frequent.
         """
         self.strategy = strategy
+        self.dtype_list = dtype_list
 
     def impute(self, df):
         """ Fills the missing values with the given strategy.
@@ -45,12 +51,26 @@ class MySimpleImputer:
         -------
         pd.DataFrame
             The resulting data where missing values have been filled using the given strategy.
+            Categorical features will always be imputed with "most_frequent"
         """
         if df.empty:
             return df
 
-        imp = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-        idf = pd.DataFrame(imp.fit_transform(replace_infs(df)))
+        idf = df.copy()
+        num_cols = [k for k in self.dtype_list if self.dtype_list[k] == "numeric"]
+        cat_cols = [col for col in idf.columns if col not in num_cols]
+
+        if num_cols:
+            imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
+            idf[num_cols] = pd.DataFrame(
+                imp_num.fit_transform(replace_infs(idf[num_cols]))
+            )
+        if cat_cols:
+            imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
+            idf[cat_cols] = pd.DataFrame(
+                imp_cat.fit_transform(replace_infs(idf[cat_cols]))
+            )
+
         idf.columns = df.columns
         idf.index = df.index
         return idf
@@ -240,7 +260,7 @@ class XGBImputer:
         return grid_search.best_estimator_
 
 
-def measure_val_error(df, imputer,dtype_list, n_folds=5):
+def measure_val_error(df, imputer, dtype_list, n_folds=5):
     """ Computes the possible error of the imputation.
         Uses N-fold subsampling and averages the errors
         over the folds. At the moment only RMSE for all data
