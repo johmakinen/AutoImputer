@@ -16,7 +16,7 @@ def get_test_data():
 
     list[(data,dtypes)]
     """
-    max_size = 10
+    max_size = 20
     test_set = []
     letters = string.ascii_lowercase
 
@@ -35,25 +35,41 @@ def get_test_data():
         )
 
         # Assign categorical columns randomly:
-        n_cat_cols = np.random.randint(low=0, high=len(col_names))
+        n_cat_cols = np.random.randint(low=0, high=len(col_names) - 1)
         cat_cols = curr_df.sample(n=n_cat_cols, axis="columns").columns
         for col in cat_cols:
             n_classes = np.random.randint(low=2, high=5)
+            classes_strs = np.random.choice(
+                a=[
+                    "".join(random.choice(letters) for i in range(5))
+                    for x in range(n_classes)
+                ],
+                size=curr_df.shape[0] - n_classes,
+            )
             curr_df[col] = pd.Series(
                 # Need to make sure the column has at least two classes
-                np.append(
-                    np.random.choice(
-                        a=[*range(0, n_classes)], size=curr_df.shape[0] - n_classes
-                    ),
-                    [*range(0, n_classes)],
-                ),
+                np.append(classes_strs, np.unique(classes_strs)),
                 index=curr_df.index,
             )
             dtypes[curr_df.columns.tolist().index(col)] = "categorical"
+            # curr_df[col] = pd.Series(
+            #     # Need to make sure the column has at least two classes
+            #     np.append(
+            #         np.random.choice(
+            #             a=[
+            #                 "".join(random.choice(letters) for i in range(10))
+            #                 for x in range(n_classes)
+            #             ],
+            #             size=curr_df.shape[0] - n_classes,
+            #         ),
+            #         [*range(0, n_classes)],
+            #     ),
+            #     index=curr_df.index,
+            # )
 
         # Simulate missing values
         curr_df = simulate_missing_values(
-            curr_df, output_name=None, prop=np.random.uniform(low=0.05,high=0.7)
+            curr_df, output_name=None, prop=np.random.uniform(low=0.05, high=0.7)
         )
 
         # Add a few np.inf values to random dataframes,
@@ -69,22 +85,6 @@ def get_test_data():
                 np.random.randint(low=0, high=curr_df.shape[0]), inf_col
             ] = -np.inf
         test_set.append((curr_df, dtypes))
-
-    # ----------------
-    # Pure numeric data
-    col_names = ["".join(random.choice(letters) for i in range(10)) for x in range(6)]
-    # Initialise all columns as numeric
-    dtypes = ["numeric"] * len(col_names)
-    num_df = pd.DataFrame(
-        np.random.random_sample(size=(6 * np.random.randint(low=6, high=6 * 50), 6)),
-        columns=col_names,
-    )
-    test_set.append((num_df, dtypes))
-
-    # Pure categorical data
-    dtypes = ["categorical"] * len(col_names)
-    cat_df = (num_df * 3).astype("int32")
-    test_set.append((cat_df, dtypes))
 
     return test_set
 
@@ -110,7 +110,8 @@ def test_imputer(imputer, test_data):
         df = curr[0]
         dtypes = curr[1]
         imputer.dtype_list = dict(zip(df.columns, dtypes))
-
+        # print('dtypes in df',df.dtypes)
+        # print('dtypes in list',dtypes)
         res = imputer.impute(df)
 
         assert df.shape == res.shape  # Shape is not changed

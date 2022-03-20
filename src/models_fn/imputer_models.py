@@ -6,12 +6,11 @@ from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import mean_squared_error, f1_score, log_loss, make_scorer
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-
+from sklearn.compose import ColumnTransformer
 from ..data_fn.data_process import replace_infs
 import pandas as pd
 import numpy as np
 import warnings
-
 
 warnings.filterwarnings("ignore")
 import xgboost as xgb
@@ -59,21 +58,36 @@ class MySimpleImputer:
         num_cols = [k for k in self.dtype_list if self.dtype_list[k] == "numeric"]
         cat_cols = [col for col in idf.columns if col not in num_cols]
 
-        if num_cols:
-            imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-            idf.loc[:, num_cols] = pd.DataFrame(
-                imp_num.fit_transform(idf[num_cols]), index=idf.index,
-            ).values
+        column_trans = ColumnTransformer(
+            [
+                ("imp_col1", SimpleImputer(strategy=self.strategy), num_cols),
+                ("imp_col2", SimpleImputer(strategy="most_frequent"), cat_cols),
+            ],
+            remainder="passthrough",
+        )
+        # Columnstransformer doesn't keep the original column order...
+        res = pd.DataFrame(
+            column_trans.fit_transform(idf),
+            index=idf.index,
+            columns=column_trans.transformers[0][2] + column_trans.transformers[1][2],
+        )
+        # if num_cols:
+        #     imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
+        #     idf.loc[:, num_cols] = pd.DataFrame(
+        #         imp_num.fit_transform(idf[num_cols]), index=idf.index,
+        #     ).values
 
-        if cat_cols:
-            imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
-            idf.loc[:, cat_cols] = pd.DataFrame(
-                imp_cat.fit_transform(idf[cat_cols]), index=idf.index,
-            ).values
+        # if cat_cols:
+        #     imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
+        #     idf.loc[:, cat_cols] = pd.DataFrame(
+        #         imp_cat.fit_transform(idf[cat_cols]), index=idf.index,
+        #     ).values
 
-        idf.columns = df.columns
-        idf.index = df.index
-        return idf
+        # idf.columns = df.columns
+        # idf.index = df.index
+        return res.reindex(
+            columns=idf.columns
+        )  # Reindex to match the original column order
 
 
 class XGBImputer:
@@ -139,6 +153,7 @@ class XGBImputer:
             if cat_cols_no_curr_col:
 
                 # Dummify categorical columns
+                # Here we do not care that much about data leaks, as train set is separated afterwards for GridSearch.
                 oe = OneHotEncoder(sparse=False, handle_unknown="ignore", dtype="int")
 
                 # Exclude curr_col
@@ -160,6 +175,7 @@ class XGBImputer:
             df_train = df_with_dummies.dropna(
                 subset=[curr_col]
             ).copy()  # Target has no nans
+
             df_test = df_with_dummies[df_with_dummies[curr_col].isnull()].copy()
 
             # If current column to be imputed is categorical -> encode label
@@ -167,7 +183,7 @@ class XGBImputer:
                 # Encode label
                 le = LabelEncoder()
                 df_train.loc[:, curr_col] = le.fit_transform(df_train[curr_col])
-                self.le_name_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
+                self.le_name_mapping = dict(zip(le.transform(le.classes_), le.classes_))
 
             # Get best model
             best_model = self.train(df_train, curr_col)
@@ -183,8 +199,7 @@ class XGBImputer:
 
             # # Map categorical targets back to original labels
             if curr_col in cat_cols:
-                result[curr_col] = result[curr_col].map(self.le_name_mapping)
-
+                result[curr_col] = result[curr_col].replace(self.le_name_mapping)
         return result
 
     def train(self, df, curr_col):
@@ -208,7 +223,6 @@ class XGBImputer:
         X_train, y_train = train_set.drop(curr_col, axis=1), train_set[curr_col]
 
         # Choose type of model:
-
         if self.dtype_list[curr_col] == "numeric":
             model = xgb.XGBRegressor(eval_metric="rmse")
             scoring = "neg_root_mean_squared_error"
@@ -297,9 +311,10 @@ def measure_val_error(df, imputer, n_folds=5):
         fold_error = pd.DataFrame(0, columns=curr_df.columns, index=range(1))
 
         nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
+        nan_cols = nans.columns[nans.isna().any()].tolist()
         res = imputer.impute(nans)
 
-        for curr_col in curr_df.columns:
+        for curr_col in nan_cols:
             if imputer.dtype_list[curr_col] == "numeric":
                 fold_error.loc[0, curr_col] = mean_squared_error(
                     y_true=curr_df[curr_col].values,
@@ -307,15 +322,26 @@ def measure_val_error(df, imputer, n_folds=5):
                     squared=False,
                 )
             elif imputer.dtype_list[curr_col] == "categorical":
-                if len(pd.unique(curr_df[curr_col])) > 2:
+                labels = pd.unique(curr_df[curr_col])
+                if len(labels) > 2:
                     average = "micro"
+                    fold_error.loc[0, curr_col] = f1_score(
+                        y_true=curr_df[curr_col].values,
+                        y_pred=res[curr_col].values,
+                        average=average,
+                        # labels=labels,
+                    )
                 else:
                     average = "binary"
-                fold_error.loc[0, curr_col] = f1_score(
-                    y_true=curr_df[curr_col].values,
-                    y_pred=res[curr_col].values,
-                    average=average,
-                )
+                    fold_error.loc[0, curr_col] = f1_score(
+                        y_true=curr_df[curr_col].values,
+                        y_pred=res[curr_col].values,
+                        average=average,
+                        # labels=labels,
+                        pos_label=labels[
+                            0
+                        ],  # <- binary classification needs pos label or 0/1 data... --> WETWET that we cant really get rid off.
+                    )
 
         errors = pd.concat([errors, fold_error], axis=0)
 

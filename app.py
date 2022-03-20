@@ -52,6 +52,7 @@ def plot_nas(df):
     """
     return plot_na_prop(df)
 
+
 # call back function -> runs BEFORE the rest of the app
 def reset_button():
     """Resets session states for some variables.
@@ -77,9 +78,14 @@ with t2:
     )
 
 st.write("")
-st.markdown("""Imputing missing values automatically...""")
-# st.sidebar.title("Settings")
-
+with st.expander("What is this app?", expanded=False):
+    st.write(
+        """
+    Imputing can be seen as assigning a value to something by inference. With this app, you are able to impute the missing values of your dataset easily and accurately.   
+    All you have to do is to upload your data as a .csv file to the app, and follow the instructions. Afterwards, you have the chance to download the imputed dataset.    
+            """
+    )
+st.write("")
 
 uploaded_file = st.file_uploader("Upload CSV", type=".csv")
 
@@ -116,7 +122,7 @@ if uploaded_file:
         st.warning(
             "Warning: Columns with all missing values found in the input data. Removing these columns.."
         )
-        df.dropna(axis=1,how="all", inplace=True)
+        df.dropna(axis=1, how="all", inplace=True)
         FILE_OK = 1
     if FILE_OK:
         st.markdown("### Data preview")
@@ -172,6 +178,11 @@ if GOT_DATA and GOT_DTYPE_LIST:
                 5,
                 2,
             )
+            st.markdown(
+                """Extreme Gradient Boosting works by predicting each column\'s missing values using the other columns as features.   
+                    This is done for each column that has missing values. For large dataset, or datasets with high cardinal categorical features, the runtime of the model can
+                    be long."""
+            )
 
     # If selection ready, press "Submit" to impute.
     with st.form(key="my_form"):
@@ -222,13 +233,13 @@ if GOT_DATA and GOT_DTYPE_LIST:
                     $$ 
                     For multiclass features micro -averaging is used:
                     _Micro averaging computes a global average F1 score by counting the sums of the True Positives (TP),
-                     False Negatives (FN), and False Positives (FP). These are then plugged in the above $F_1$ equation._
+                     False Negatives (FN), and False Positives (FP) over all classes. These are then plugged in the above $F_1$ equation._
                     """
             )
             n_folds = 5
             with st.spinner("Validating..."):
                 error = measure_val_error(df, imputer=imputer, n_folds=5)
-            st.subheader(f"Metrics with {n_folds} folds.")
+            st.subheader(f"Metrics with {n_folds} validation folds.")
             st.write(error)
 
     # Give ability to download resulting data.
