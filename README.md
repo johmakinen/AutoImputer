@@ -34,7 +34,8 @@ A way to impute missing values using a Streamlit app
 - [x] Test if input data has rows with all missing values -> remove from data + warning
 - [x] profile code (own .py file for imputing xgb, try to speedup) -> did some speedup, but gridsearch is a huge bottleneck
 - [x] Visualize data preview
-- [ ] Add error if some column completely empty -> imputing wont work.
+- [x] Add warning if some column completely empty -> imputing wont work.
+- [ ] Train model with fully non-nan data!
 - [ ] Github README
 - [ ] Make everything nice looking
     - [ ] Add intoduction

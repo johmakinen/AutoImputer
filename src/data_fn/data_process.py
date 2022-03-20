@@ -79,7 +79,8 @@ def test_input_data(df):
         "is_empty": df.empty,
         "dtypes": set(df.dtypes.tolist()),
         "prop_missing": df.isnull().sum().sum() / (df.shape[0] * df.shape[1]),
-        "n_full_nan_rows": df.iloc[df.index[df.isnull().all(1)]].shape[0],
+        "n_full_nan_rows": len(df.index[df.isnull().all(1)]),
+        "n_full_nan_cols":sum(df.isnull().values.all(axis=0)*1)
     }
 
     return res

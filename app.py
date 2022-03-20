@@ -112,6 +112,12 @@ if uploaded_file:
         )
         df.dropna(how="all", inplace=True)
         FILE_OK = 1
+    if val_df["n_full_nan_cols"]:
+        st.warning(
+            "Warning: Columns with all missing values found in the input data. Removing these columns.."
+        )
+        df.dropna(axis=1,how="all", inplace=True)
+        FILE_OK = 1
     if FILE_OK:
         st.markdown("### Data preview")
         st.dataframe(df[pd.isnull(df).any(axis=1)].head())
