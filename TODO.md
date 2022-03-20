@@ -34,15 +34,18 @@
 - [x] profile code (own .py file for imputing xgb, try to speedup) -> did some speedup, but gridsearch is a huge bottleneck
 - [x] Visualize data preview
 - [x] Add warning if some column completely empty -> imputing wont work.
+    - --> drop column
 - [x] Make everything nice looking
     - [x] Add intoduction
     - [x] Add explanations using st.expander to everything
 - [x] get test data from kaggle/oecd/eu databank etc..
+- [ ] clean up code (commented unused code etc..)
 - [ ] add warning if all rows contain atleast one missing value -> cant validate
-- [ ] add try: clauses for if user input categorical features as numeric.
-- [ ] Deploy on Streamlit Cloud
+- [ ] add try: clauses for if user selects categorical features as numeric.
 - [ ] Github README
-- [ ] Add to portfolio
+- [ ] Add logo/figure of "AutoImputer" to readme and app.py
+- [ ] Deploy on Streamlit Cloud
+- [ ] Add to portfolio (WIP)
 - [ ] PyTorch LSTM/RNN/CNN/??? Randomforest (https://www.frontiersin.org/articles/10.3389/fdata.2021.693674/full#h6)
     - Read up on what to use
     - Choose one method, implement it
@@ -51,4 +54,4 @@
     - XGBoost can handle missing values in feature columns
     - --> Will full data give better results?
 - [ ] Is XGBoost updated? -> update to get rid of FutureWarning.
-    - [ ] Also if available, cateogircal support -> no one-hot encoding!
+    - [ ] Also if available, cateogorical support -> no one-hot encoding!
