@@ -33,5 +33,4 @@ def plot_na_prop(df: pd.DataFrame):
         fig.update_layout(
             {"plot_bgcolor": "rgba(0, 0, 0, 0)", "paper_bgcolor": "rgba(0, 0, 0, 0)",}
         )
-        # fig.show()
     return fig

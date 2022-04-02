@@ -7,7 +7,6 @@ import random
 import string
 
 
-# @pytest.fixture(scope="session")
 def get_test_data():
     """Creates test set for imputers
 
@@ -52,20 +51,6 @@ def get_test_data():
                 index=curr_df.index,
             )
             dtypes[curr_df.columns.tolist().index(col)] = "categorical"
-            # curr_df[col] = pd.Series(
-            #     # Need to make sure the column has at least two classes
-            #     np.append(
-            #         np.random.choice(
-            #             a=[
-            #                 "".join(random.choice(letters) for i in range(10))
-            #                 for x in range(n_classes)
-            #             ],
-            #             size=curr_df.shape[0] - n_classes,
-            #         ),
-            #         [*range(0, n_classes)],
-            #     ),
-            #     index=curr_df.index,
-            # )
 
         # Simulate missing values
         curr_df = simulate_missing_values(
@@ -110,8 +95,6 @@ def test_imputer(imputer, test_data):
         df = curr[0]
         dtypes = curr[1]
         imputer.dtype_list = dict(zip(df.columns, dtypes))
-        # print('dtypes in df',df.dtypes)
-        # print('dtypes in list',dtypes)
         res = imputer.impute(df)
 
         assert df.shape == res.shape  # Shape is not changed
@@ -134,7 +117,7 @@ def test_validation_error(imputer, test_data):
         imputer.dtype_list = dict(zip(df.columns, dtypes))
         errors = measure_val_error(df, imputer=imputer, n_folds=2)
 
-        assert len(errors) == len(df.columns)  # All features have errors
+        assert len(errors) == len(df.columns)  # All features have validation errors
 
 
 # Instructions:

@@ -4,7 +4,7 @@ print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resol
 
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import mean_squared_error, f1_score, log_loss, make_scorer
+from sklearn.metrics import mean_squared_error, f1_score
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from ..data_fn.data_process import replace_infs
@@ -65,26 +65,14 @@ class MySimpleImputer:
             ],
             remainder="passthrough",
         )
+
         # Columnstransformer doesn't keep the original column order...
         res = pd.DataFrame(
             column_trans.fit_transform(idf),
             index=idf.index,
             columns=column_trans.transformers[0][2] + column_trans.transformers[1][2],
         )
-        # if num_cols:
-        #     imp_num = SimpleImputer(missing_values=np.nan, strategy=self.strategy)
-        #     idf.loc[:, num_cols] = pd.DataFrame(
-        #         imp_num.fit_transform(idf[num_cols]), index=idf.index,
-        #     ).values
 
-        # if cat_cols:
-        #     imp_cat = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
-        #     idf.loc[:, cat_cols] = pd.DataFrame(
-        #         imp_cat.fit_transform(idf[cat_cols]), index=idf.index,
-        #     ).values
-
-        # idf.columns = df.columns
-        # idf.index = df.index
         return res.reindex(
             columns=idf.columns
         )  # Reindex to match the original column order
@@ -130,7 +118,6 @@ class XGBImputer:
         """
         if df.empty:
             return df
-        # df.dropna(axis=0,how='all',inplace=True)
 
         # We want to keep separate the results and the current data.
         # This is because we dont want our imputations of one column
@@ -296,7 +283,6 @@ def measure_val_error(df, imputer, n_folds=5):
         For categorical values use ...
 
     """
-    # y_true and y_pred contain different number of classes 2, 3. Please provide the true labels explicitly through the labels argument. Classes found in y_true: [0 2]
 
     curr_df = df.copy()
     curr_df = replace_infs(curr_df)
@@ -329,7 +315,6 @@ def measure_val_error(df, imputer, n_folds=5):
                         y_true=curr_df[curr_col].values,
                         y_pred=res[curr_col].values,
                         average=average,
-                        # labels=labels,
                     )
                 else:
                     average = "binary"
@@ -337,7 +322,6 @@ def measure_val_error(df, imputer, n_folds=5):
                         y_true=curr_df[curr_col].values,
                         y_pred=res[curr_col].values,
                         average=average,
-                        # labels=labels,
                         pos_label=labels[
                             0
                         ],  # <- binary classification needs pos label or 0/1 data... --> WETWET that we cant really get rid off.

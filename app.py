@@ -2,9 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from timeit import default_timer as timer
-
-# from PIL import Image
-
+from pathlib import Path
+import base64
 # My modules
 from src.models_fn.imputer_models import MySimpleImputer, XGBImputer, measure_val_error
 from src.data_fn.data_process import test_input_data
@@ -54,19 +53,37 @@ def plot_nas(df):
 
 
 # call back function -> runs BEFORE the rest of the app
-def reset_button():
+def reset_button(infer_cat_cols):
     """Resets session states for some variables.
     """
     st.session_state["p"] = False
-    st.session_state["cat_cols"] = []
+    st.session_state["cat_cols"] = infer_cat_cols
     return
 
 
 # ----------------------------------------------------------------------------------------
 # LAYOUT
-t1, t2 = st.columns(2)
-with t1:
-    st.title("AutoImputer")
+def img_to_bytes(img_path):
+    img_bytes = Path(img_path).read_bytes()
+    encoded = base64.b64encode(img_bytes).decode()
+    return encoded
+
+# logo_fig = Image.open('figures/Logo.png')
+header_html = "<img src='data:image/png;base64,{}' class='img-fluid'>".format(
+    img_to_bytes("figures/Logo_figma.png")
+)
+
+
+st.markdown(
+header_html, unsafe_allow_html=True,
+)
+
+
+
+t1, t2 = st.columns((9,3))
+# with t1:
+#     st.title("AutoImputer")
+
 
 with t2:
     st.write("")
@@ -105,25 +122,30 @@ if uploaded_file:
     if val_df["is_empty"]:
         st.error("Error: Empty data")
         FILE_OK = 0
+
     if val_df["prop_missing"] > 0.75:
         st.warning(
             "Warning: Proportion of missing values too high for accurate imputation ("
             + str(int(val_df["prop_missing"] * 100))
             + "%)"
         )
-        FILE_OK = 1
+    if val_df["bool_all_rows_have_nans"]:
+        st.warning(
+            "Warning: All rows contain at least one missing value. Can't compute validation error."
+        )
+
     if val_df["n_full_nan_rows"]:
         st.warning(
             "Warning: Rows with all missing values found in the input data. Removing these rows.."
         )
         df.dropna(how="all", inplace=True)
-        FILE_OK = 1
+
     if val_df["n_full_nan_cols"]:
         st.warning(
             "Warning: Columns with all missing values found in the input data. Removing these columns.."
         )
         df.dropna(axis=1, how="all", inplace=True)
-        FILE_OK = 1
+
     if FILE_OK:
         st.markdown("### Data preview")
         st.dataframe(df[pd.isnull(df).any(axis=1)].head())
@@ -134,22 +156,56 @@ if uploaded_file:
 if GOT_DATA:
     # Get user input for column types
     cols = df.columns
+
+    # Infer coltypes:
+    test_df = df.dropna()
+    text_cols = [
+        x
+        for x in cols
+        if (test_df[x].dtype == object) and (isinstance(test_df.iloc[0][x], str))
+    ]
+    low_cardinality_cols = [
+        col for col in test_df.columns if len(np.unique(test_df[col])) < 5
+    ]
+    infer_cat_cols = set(text_cols + low_cardinality_cols)
+
+    # This gave a warning at some point, then it didn't.
+    # The widget with key "cat_cols" was created with a default value but also had its value set via the Session State API.
+
     cat_cols = st.multiselect(
-        "Please input categorical columns here.", cols, default=None, key="cat_cols"
+        "Please input categorical columns here. We have inferred some of them already.",
+        cols,
+        default=infer_cat_cols,
+        key="cat_cols",
     )
+
     dtypes = ["numeric" if col not in cat_cols else "categorical" for col in cols]
+
     c1, c2, _ = st.columns((2, 2, 5))
     with c1:
         submit_cols = st.checkbox(label="Submit column types", key="p")
     with c2:
         # button to control reset
-        reset = st.button("Set columns again", on_click=reset_button)
+        reset = st.button(
+            "Set columns again", on_click=reset_button, args=(infer_cat_cols,)
+        )
 
 
 GOT_DTYPE_LIST = 0
 if GOT_DATA and submit_cols:
     dtype_list = dict(zip(cols, dtypes))
-    GOT_DTYPE_LIST = 1
+    obv_wrong_dtype = [
+        col
+        for col in test_df.columns
+        if (dtype_list[col] == "numeric") and (col in text_cols)
+    ]
+    if obv_wrong_dtype:
+        st.warning(
+            "Warning: A column with string features was selected as 'numeric'. Please check your column selection for columns: "
+            + str(obv_wrong_dtype)
+        )
+    else:
+        GOT_DTYPE_LIST = 1
 
 
 if GOT_DATA and GOT_DTYPE_LIST:
@@ -198,8 +254,8 @@ if GOT_DATA and GOT_DTYPE_LIST:
         start_time = timer()
         imputer = imputer_dict[method]
         with st.spinner("Imputing missing values..."):
-            # res = use_imputer(df, imputer)
             res = imputer.impute(df)
+
         elapsed_time = timer() - start_time
         st.write(f"Imputation took {round(elapsed_time,2)} seconds.")
 

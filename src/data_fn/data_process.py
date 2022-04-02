@@ -30,7 +30,7 @@ def create_iris_sample():
 
 def simulate_missing_values(df, output_name=None, prop=0.4):
     """Adds missing values to a dataframe,
-            saves the df into a csv.
+            saves the df into a csv if output_name given.
             Used mostly for sample data purposes.
 
     Parameters
@@ -81,6 +81,7 @@ def test_input_data(df):
         "prop_missing": df.isnull().sum().sum() / (df.shape[0] * df.shape[1]),
         "n_full_nan_rows": len(df.index[df.isnull().all(1)]),
         "n_full_nan_cols": sum(df.isnull().values.all(axis=0) * 1),
+        "bool_all_rows_have_nans":sum((df.isnull()).sum(axis=1)>0) == df.shape[0]
     }
 
     return res
@@ -98,9 +99,12 @@ def replace_infs(df):
     -------
     pd.DataFrame
     """
+
     # m1 = df.eq(np.inf)
     # m2 = df.eq(-np.inf)
     # df = df.mask(m1, df[~m1].max(), axis=1).mask(m2, df[~m2].min(), axis=1)
+    # For performance resons infinities become nan.
+    # Could use max/min of column values.
     res = df.replace([np.inf, -np.inf], np.nan)
     return res
 
