@@ -43,7 +43,9 @@
 - [x] add warning if all rows contain atleast one missing value -> cant validate
 - [x] add dtype inference
 - [x] Add logo/figure of "AutoImputer" to readme and app.py
-- [x] Deploy on Streamlit Cloud
+- [ ] Deploy on Streamlit Cloud
+    - probably out of memory
+    - Test without training
 - [ ] Github README
 - [ ] Add to portfolio (WIP)
 - [ ] PyTorch LSTM/RNN/CNN/??? Randomforest (https://www.frontiersin.org/articles/10.3389/fdata.2021.693674/full#h6)

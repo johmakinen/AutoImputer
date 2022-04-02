@@ -36,7 +36,6 @@ def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode("utf-8")
 
-
 @st.experimental_memo
 def plot_nas(df):
     """Plots the missing value proportions for each column.
