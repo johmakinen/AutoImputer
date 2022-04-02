@@ -228,9 +228,9 @@ if GOT_DATA and GOT_DTYPE_LIST:
     elif method == "XGBoost":
         with st.expander("Settings:"):
             cv_opt = st.slider(
-                "Number of folds to use in cross-validation when learning the best parameters.",
+                "Number of folds to use in cross-validation when learning the best parameters. Due to Streamlit's limited resources, it is suggested to not use too large values.",
                 2,
-                5,
+                4,
                 2,
             )
             st.markdown(
