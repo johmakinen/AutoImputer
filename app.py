@@ -4,6 +4,8 @@ import numpy as np
 from timeit import default_timer as timer
 from pathlib import Path
 import base64
+import os
+
 # My modules
 from src.models_fn.imputer_models import MySimpleImputer, XGBImputer, measure_val_error
 from src.data_fn.data_process import test_input_data
@@ -68,22 +70,18 @@ def img_to_bytes(img_path):
     encoded = base64.b64encode(img_bytes).decode()
     return encoded
 
-# logo_fig = Image.open('figures/Logo.png')
+
 header_html = "<img src='data:image/png;base64,{}' class='img-fluid'>".format(
     img_to_bytes("figures/Logo_figma.png")
 )
 
 
 st.markdown(
-header_html, unsafe_allow_html=True,
+    header_html, unsafe_allow_html=True,
 )
 
 
-
-t1, t2 = st.columns((9,3))
-# with t1:
-#     st.title("AutoImputer")
-
+t1, t2 = st.columns((9, 3))
 
 with t2:
     st.write("")
@@ -112,7 +110,8 @@ use_example_file = st.checkbox(
 
 GOT_DATA = 0
 if use_example_file:
-    uploaded_file = "data\processed\iris_nans.csv"
+    cwd = os.getcwd()
+    uploaded_file = cwd + "/data/processed/iris_nans.csv"
 
 # Read data, error handling
 if uploaded_file:
