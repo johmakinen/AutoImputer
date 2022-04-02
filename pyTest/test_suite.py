@@ -28,7 +28,7 @@ def get_test_data():
         dtypes = ["numeric"] * len(col_names)
         curr_df = pd.DataFrame(
             np.random.random_sample(
-                size=(size * np.random.randint(low=size, high=size * 50), size)
+                size=(size * np.random.randint(low=size*20, high=size * 50), size)
             ),
             columns=col_names,
         )
@@ -59,7 +59,7 @@ def get_test_data():
 
         # Add a few np.inf values to random dataframes,
         # We want the models to be robust
-        if np.random.random() < 0.5:
+        if np.random.random() < 0.8:
             inf_col = random.choice(
                 [col for col in curr_df.columns if col not in cat_cols]
             )

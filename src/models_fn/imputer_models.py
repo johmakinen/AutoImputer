@@ -54,23 +54,28 @@ class MySimpleImputer:
         if df.empty:
             return df
 
+        # Replace infinities with nan
         idf = replace_infs(df.copy())
+
         num_cols = [k for k in self.dtype_list if self.dtype_list[k] == "numeric"]
         cat_cols = [col for col in idf.columns if col not in num_cols]
 
         column_trans = ColumnTransformer(
             [
-                ("imp_col1", SimpleImputer(strategy=self.strategy), num_cols),
-                ("imp_col2", SimpleImputer(strategy="most_frequent"), cat_cols),
+                ("imp_col1", SimpleImputer(strategy=self.strategy,verbose=100), num_cols),
+                ("imp_col2", SimpleImputer(strategy="most_frequent",verbose=100), cat_cols),
             ],
             remainder="passthrough",
         )
 
         # Columnstransformer doesn't keep the original column order...
+        extracted_cols = column_trans.transformers[0][2] + column_trans.transformers[1][2]
+        transformed_data = column_trans.fit_transform(idf)
+
         res = pd.DataFrame(
-            column_trans.fit_transform(idf),
+            transformed_data,
             index=idf.index,
-            columns=column_trans.transformers[0][2] + column_trans.transformers[1][2],
+            columns=extracted_cols,
         )
 
         return res.reindex(
@@ -288,10 +293,12 @@ def measure_val_error(df, imputer, n_folds=5):
     curr_df = replace_infs(curr_df)
     curr_df = curr_df.dropna(axis=0, how="any")
 
-    if curr_df.empty:
+    # Not enough data for validation
+    if curr_df.empty or curr_df.shape[0] < 10:
         return dict(zip(curr_df.columns, [0] * len(curr_df.columns)))
 
     errors = pd.DataFrame(columns=curr_df.columns)
+
     # n-fold cross validation
     for i in range(n_folds):
         fold_error = pd.DataFrame(0, columns=curr_df.columns, index=range(1))

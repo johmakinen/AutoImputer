@@ -11,7 +11,13 @@
 
 <!-- mp4 example -->
 
-figma figure: original data -> arrow -> new data, highlight missing with red, imputed with green.
+<!-- figma figure: original data -> arrow -> new data, highlight missing with red, imputed with green. -->
+
+## 🛠️ How to contribute ?
+
+All contributions, ideas and bug reports are welcome! 
+We encourage you to open an [issue](https://github.com/artefactory-global/streamlit_prophet/issues) for any change you would like to make on this project.
+
 
 
 
