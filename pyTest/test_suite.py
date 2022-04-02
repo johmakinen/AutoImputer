@@ -15,7 +15,7 @@ def get_test_data():
 
     list[(data,dtypes)]
     """
-    max_size = 20
+    max_size = 10
     test_set = []
     letters = string.ascii_lowercase
 
@@ -28,7 +28,7 @@ def get_test_data():
         dtypes = ["numeric"] * len(col_names)
         curr_df = pd.DataFrame(
             np.random.random_sample(
-                size=(size * np.random.randint(low=size*20, high=size * 50), size)
+                size=(size * max(25, np.random.randint(low=5, high=20)), size)
             ),
             columns=col_names,
         )

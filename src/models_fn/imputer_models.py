@@ -62,21 +62,27 @@ class MySimpleImputer:
 
         column_trans = ColumnTransformer(
             [
-                ("imp_col1", SimpleImputer(strategy=self.strategy,verbose=100), num_cols),
-                ("imp_col2", SimpleImputer(strategy="most_frequent",verbose=100), cat_cols),
+                (
+                    "imp_col1",
+                    SimpleImputer(strategy=self.strategy, verbose=100),
+                    num_cols,
+                ),
+                (
+                    "imp_col2",
+                    SimpleImputer(strategy="most_frequent", verbose=100),
+                    cat_cols,
+                ),
             ],
             remainder="passthrough",
         )
 
         # Columnstransformer doesn't keep the original column order...
-        extracted_cols = column_trans.transformers[0][2] + column_trans.transformers[1][2]
+        extracted_cols = (
+            column_trans.transformers[0][2] + column_trans.transformers[1][2]
+        )
         transformed_data = column_trans.fit_transform(idf)
 
-        res = pd.DataFrame(
-            transformed_data,
-            index=idf.index,
-            columns=extracted_cols,
-        )
+        res = pd.DataFrame(transformed_data, index=idf.index, columns=extracted_cols,)
 
         return res.reindex(
             columns=idf.columns
