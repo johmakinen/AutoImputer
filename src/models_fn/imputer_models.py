@@ -229,7 +229,7 @@ class XGBImputer:
                 "max_depth": [4, 6, 8],
                 "alpha": [0, 3],
                 "lambda": [1, 3],
-                "learning_rate": [0.5],
+                "learning_rate": [1],
             }
 
         elif self.dtype_list[curr_col] == "categorical":
@@ -237,7 +237,7 @@ class XGBImputer:
             classes = pd.unique(y_train)
             n_classes = len(classes)
             param_grid = {
-                "learning_rate": [0.5],
+                "learning_rate": [1],
                 "max_depth": [4, 6, 8],
                 "subsample": [0.5, 1],
                 "colsample_bytree": [0.5, 1],
@@ -271,7 +271,7 @@ class XGBImputer:
         return grid_search.best_estimator_
 
 
-def measure_val_error(df, imputer, n_folds=5):
+def measure_val_error(df, imputer, n_folds=3):
     """ Computes the possible error of the imputation.
         Uses N-fold subsampling and averages the errors
         over the folds. At the moment only RMSE for all data
@@ -285,7 +285,7 @@ def measure_val_error(df, imputer, n_folds=5):
     imputer : Custom imputer
         Must have an "impute" method, which returns a dataframe. E.g. SimpleImputer()
     n_folds : int, optional
-        Number of N-folds to perform, by default 5
+        Number of N-folds to perform, by default 3
 
     Returns
     -------

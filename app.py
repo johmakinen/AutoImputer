@@ -291,9 +291,9 @@ if GOT_DATA and GOT_DTYPE_LIST:
                      False Negatives (FN), and False Positives (FP) over all classes. These are then plugged in the above $F_1$ equation._
                     """
             )
-            n_folds = 5
+            n_folds = 3
             with st.spinner("Validating..."):
-                error = measure_val_error(df, imputer=imputer, n_folds=5)
+                error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
             st.subheader(f"Metrics with {n_folds} validation folds.")
             st.write(error)
 
