@@ -16,7 +16,7 @@
 ## 🛠️ How to contribute ?
 
 All contributions, ideas and bug reports are welcome! 
-We encourage you to open an [issue](https://github.com/artefactory-global/streamlit_prophet/issues) for any change you would like to make on this project.
+It is encouraged to open an [issue](https://github.com/johmakinen/AutoImputer/issues) for any change you would like to make on this project.
 
 
 
