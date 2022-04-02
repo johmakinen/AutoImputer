@@ -42,9 +42,9 @@
 - [x] clean up code (commented unused code etc..)
 - [x] add warning if all rows contain atleast one missing value -> cant validate
 - [x] add dtype inference
-- [ ] Github README
 - [x] Add logo/figure of "AutoImputer" to readme and app.py
-- [ ] Deploy on Streamlit Cloud
+- [x] Deploy on Streamlit Cloud
+- [ ] Github README
 - [ ] Add to portfolio (WIP)
 - [ ] PyTorch LSTM/RNN/CNN/??? Randomforest (https://www.frontiersin.org/articles/10.3389/fdata.2021.693674/full#h6)
     - Read up on what to use
