@@ -259,7 +259,7 @@ class XGBImputer:
             estimator=model,
             param_distributions=param_grid,
             scoring=scoring,
-            n_jobs=-1,
+            n_jobs=2, # <- Streamlit's resources are very limited...
             cv=max(2, self.cv),
             refit=True,
             random_state=self.random_seed,
