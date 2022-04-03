@@ -1,9 +1,12 @@
+from multiprocessing.sharedctypes import Value
 from pathlib import Path
 
 print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resolve())
 
 from sklearn.impute import SimpleImputer
-from sklearn.model_selection import GridSearchCV
+
+# from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, f1_score
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -181,12 +184,12 @@ class XGBImputer:
 
                 # If there are rare (<5%) classes, dont use them for now...
                 # This messes with Kfold splits even if using stratifiedKfold
-                val_counts = df_train[curr_col].value_counts(normalize=True) < 0.01
-                keep_classes = [
-                    col for col in val_counts.index.tolist() if not val_counts[col]
-                ]
+                # val_counts = df_train[curr_col].value_counts(normalize=True) < 0.01
+                # keep_classes = [
+                #     col for col in val_counts.index.tolist() if not val_counts[col]
+                # ]
 
-                df_train = df_train[df_train[curr_col].isin(keep_classes)]
+                # df_train = df_train[df_train[curr_col].isin(keep_classes)]
 
                 # Encode label
                 le = LabelEncoder()
@@ -211,7 +214,7 @@ class XGBImputer:
         return result
 
     def train(self, df, curr_col):
-        """Train XGBoost model using RandomizedSearchCV.
+        """Train XGBoost model.
 
         Parameters
         ----------
@@ -225,40 +228,40 @@ class XGBImputer:
         xgboost.XGBRegressor() or xgboost.Classifier()
             Best model found for current column data
         """
-        # Already done in prev phase...
-        train_set = df.dropna(subset=[curr_col])
+        # For now, we do not use hyperparamter tuning as Streamlit's resources do not handle massive computation
+        # On personal laptop hyperparameter tuning works well.
 
-        X_train, y_train = train_set.drop(curr_col, axis=1), train_set[curr_col]
+        X_train, y_train = df.drop(curr_col, axis=1), df[curr_col]
 
         # Choose type of model:
         if self.dtype_list[curr_col] == "numeric":
-            model = xgb.XGBRegressor(eval_metric="rmse")
-            scoring = "neg_root_mean_squared_error"
-            param_grid = {
-                "booster": ["gbtree"],
-                "max_depth": [4, 6, 8],
-                "alpha": [0, 3],
-                "lambda": [1, 3],
-                "learning_rate": [1],
-            }
+            model = xgb.XGBRegressor(eval_metric="rmse", n_estimators=100)
+            # scoring = "neg_root_mean_squared_error"
+            # param_grid = {
+            # "learning_rate": [1],
+            # "booster": ["gbtree"],
+            # "max_depth": [4, 6],
+            # "alpha": [1],
+            # "lambda": [1],
+            # }
 
         elif self.dtype_list[curr_col] == "categorical":
 
-            model = xgb.XGBClassifier(use_label_encoder=False)
+            model = xgb.XGBClassifier(use_label_encoder=False, n_estimators=100)
             classes = pd.unique(y_train)
             n_classes = len(classes)
-            param_grid = {
-                "learning_rate": [1],
-                "max_depth": [4, 6, 8],
-                "subsample": [0.5, 1],
-                "colsample_bytree": [0.5, 1],
-            }
+            # param_grid = {
+            # "learning_rate": [1],
+            # "max_depth": [4, 6],
+            # "subsample": [0.5, 1],
+            # "colsample_bytree": [0.5, 1],
+            # }
 
             # I dont like that objectives logloss and mlogloss are used in xgb but f1's are used in grid search
             # Change this in the future, for now it is ok.
             if n_classes == 2:
                 model.set_params(objective="binary:logistic", eval_metric="logloss")
-                scoring = "f1"
+                # scoring = "f1"
 
             else:
                 model.set_params(
@@ -266,21 +269,30 @@ class XGBImputer:
                     num_class=n_classes,
                     eval_metric="mlogloss",
                 )
-                scoring = "f1_micro"
+                # scoring = "f1_micro"
 
-        grid_search = GridSearchCV(
-            estimator=model,
-            param_grid=param_grid,
-            scoring=scoring,
-            n_jobs=1,  # <- Streamlit's resources are very limited...
-            cv=max(2, self.cv),
-            refit=True,
-            error_score="raise",
-        )
+        # grid_search = GridSearchCV(
+        #     estimator=model,
+        #     param_grid=param_grid,
+        #     scoring=scoring,
+        #     n_jobs=1,  # <- Streamlit's resources are very limited...
+        #     cv=max(2, self.cv),
+        #     refit=True,
+        #     error_score="raise",
+        # )
 
-        grid_search.fit(X_train, y_train)
+        # grid_search.fit(X_train, y_train)
+        # return grid_search.best_estimator_
+        model.fit(X_train, y_train, verbose=False)
 
-        return grid_search.best_estimator_
+        # model.fit(X_train, y_train,
+        #     eval_set=[(X_train, y_train), (X_val, y_val)],
+        #     early_stopping_rounds =10,
+        #     verbose=False)
+
+        # evals_result = model.best_score
+
+        return model
 
 
 def measure_val_error(df, imputer, n_folds=3):
@@ -312,49 +324,59 @@ def measure_val_error(df, imputer, n_folds=3):
     curr_df = curr_df.dropna(axis=0, how="any")
 
     # Not enough data for validation
-    if curr_df.empty or curr_df.shape[0] < 10:
+    if curr_df.empty or (curr_df.shape[0] < 10):
         return dict(zip(curr_df.columns, [0] * len(curr_df.columns)))
 
-    errors = pd.DataFrame(columns=curr_df.columns)
+    else:
+        errors = pd.DataFrame(columns=curr_df.columns)
+        # n-fold cross validation
+        for i in range(n_folds):
+            fold_error = pd.DataFrame(0, columns=curr_df.columns, index=range(1))
 
-    # n-fold cross validation
-    for i in range(n_folds):
-        fold_error = pd.DataFrame(0, columns=curr_df.columns, index=range(1))
+            nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
+            nan_cols = nans.columns[nans.isna().any()].tolist()
+            res = imputer.impute(nans)
 
-        nans = curr_df.mask(np.random.random(curr_df.shape) < 0.4)
-        nan_cols = nans.columns[nans.isna().any()].tolist()
-        res = imputer.impute(nans)
-
-        for curr_col in nan_cols:
-            if imputer.dtype_list[curr_col] == "numeric":
-                fold_error.loc[0, curr_col] = mean_squared_error(
-                    y_true=curr_df[curr_col].values,
-                    y_pred=res[curr_col].values,
-                    squared=False,
-                )
-            elif imputer.dtype_list[curr_col] == "categorical":
-                labels = pd.unique(curr_df[curr_col])
-                if len(labels) > 2:
-                    average = "micro"
-                    fold_error.loc[0, curr_col] = f1_score(
+            for curr_col in nan_cols:
+                if imputer.dtype_list[curr_col] == "numeric":
+                    fold_error.loc[0, curr_col] = mean_squared_error(
                         y_true=curr_df[curr_col].values,
                         y_pred=res[curr_col].values,
-                        average=average,
+                        squared=False,
                     )
-                else:
-                    average = "binary"
-                    fold_error.loc[0, curr_col] = f1_score(
-                        y_true=curr_df[curr_col].values,
-                        y_pred=res[curr_col].values,
-                        average=average,
-                        pos_label=labels[
-                            0
-                        ],  # <- binary classification needs pos label or 0/1 data... --> WETWET that we cant really get rid off.
-                    )
+                elif imputer.dtype_list[curr_col] == "categorical":
+                    labels = pd.unique(curr_df[curr_col])
 
-        errors = pd.concat([errors, fold_error], axis=0)
+                    if len(labels) > 2:
+                        average = "micro"
+                        try:
+                            fold_error.loc[0, curr_col] = f1_score(
+                                y_true=curr_df[curr_col].values,
+                                y_pred=res[curr_col].values,
+                                average=average,
+                            )
+                        except ValueError:
+                            raise ValueError(
+                                f'Probably had categorical dtype for numeric data. Please check your column type selection for column "{curr_col}".'
+                            )
+                    else:
+                        average = "binary"
+                        try:
+                            fold_error.loc[0, curr_col] = f1_score(
+                                y_true=curr_df[curr_col].values,
+                                y_pred=res[curr_col].values,
+                                average=average,
+                                pos_label=labels[
+                                    0
+                                ],  # <- binary classification needs pos label or 0/1 data... --> WETWET that we cant really get rid off.
+                            )
+                        except ValueError:
+                            raise ValueError(
+                                f'Probably had categorical dtype for numeric data. Please check your column type selection for column "{curr_col}".'
+                            )
+            errors = pd.concat([errors, fold_error], axis=0)
 
-    return pd.DataFrame(errors.mean(axis=0)).round(2).to_dict()[0]
+        return pd.DataFrame(errors.mean(axis=0)).round(2).to_dict()[0]
 
 
 if __name__ == "__main__":

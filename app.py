@@ -19,23 +19,26 @@ st.set_page_config(
 # ----------------------------------------------------------------------------------------
 # FUNCTIONS:
 
-@st.experimental_singleton
-def get_simple_imputer(dtype_list,strategy):
+
+# @st.experimental_singleton
+def get_simple_imputer(dtype_list, strategy):
     return MySimpleImputer(dtype_list=dtype_list, strategy=strategy)
 
-@st.experimental_singleton
-def get_XGBImputer(dtype_list,cv):
-    return XGBImputer(
-                dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv
-            )
+
+# @st.experimental_singleton
+def get_XGBImputer(dtype_list, cv):
+    return XGBImputer(dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv)
+
 
 @st.experimental_memo
 def read_input_data(uploaded_file):
     return pd.read_csv(uploaded_file)
 
+
 @st.experimental_memo
 def infer_cat_cols_cache(df):
     return infer_cols(df)
+
 
 @st.experimental_memo
 def convert_df(df):
@@ -54,6 +57,7 @@ def convert_df(df):
     """
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode("utf-8")
+
 
 @st.experimental_memo
 def plot_nas(df):
@@ -134,6 +138,7 @@ if use_example_file:
 # Read data, error handling
 if uploaded_file:
     FILE_OK = 1
+    VAL_OK = 1
     df = read_input_data(uploaded_file)
     val_df = test_input_data(df)
     if val_df["is_empty"]:
@@ -147,6 +152,7 @@ if uploaded_file:
             + "%)"
         )
     if val_df["bool_all_rows_have_nans"]:
+        VAL_OK = 0
         st.warning(
             "Warning: All rows contain at least one missing value. Can't compute validation error."
         )
@@ -174,7 +180,7 @@ if GOT_DATA:
     # Get user input for column types
     cols = df.columns
 
-    text_cols,infer_cat_cols = infer_cat_cols_cache(df)
+    text_cols, infer_cat_cols = infer_cat_cols_cache(df)
     cat_cols = st.multiselect(
         "Please input categorical columns here. We have inferred some of them already.",
         cols,
@@ -250,9 +256,9 @@ if GOT_DATA and GOT_DTYPE_LIST:
 
     if submit_btn:
 
-        if method=='SimpleImputer':
-            imputer = get_simple_imputer(dtype_list=dtype_list,strategy=strategy)
-        elif method=='XGBoost':
+        if method == "SimpleImputer":
+            imputer = get_simple_imputer(dtype_list=dtype_list, strategy=strategy)
+        elif method == "XGBoost":
             imputer = get_XGBImputer(dtype_list=dtype_list, cv=cv_opt)
 
         start_time = timer()
@@ -270,39 +276,35 @@ if GOT_DATA and GOT_DTYPE_LIST:
         with c2:
             st.subheader("Original data")
             st.write(df)
-
-        # # Measure validation error
-        # NOT IN USE AT THE MOMENT. STREAMLIT SESSION STATES DO NOT LIKE "BUTTON INSIDE A BUTTON"
-        # if st.button("Compute validation metrics"):
-
-        #     with st.expander("Validation metrics"):
-        #         st.write(
-        #             r"""
-        #                 #### For numeric features the validation error is measured with Root Mean Squared Error (RMSE).
-        #                 _(Lower is better)_   
-        #                 $$ 
-        #                 RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^n (y_{\text{pred}}-y_{\text{real}})^2}
-        #                 $$ 
-        #                 """
-        #         )
-        #         st.write(
-        #             r"""
-        #                 #### For categorical features the measure is $F_1$ score.
-        #                 _(higher is better)_   
-        #                 For binary features
-        #                 $$ 
-        #                 F_1 = \frac{\text{true positives}}   {\text{true positives} + \frac{1}{2}(\text{false positives}+\text{false negatives})}
-        #                 $$ 
-        #                 For multiclass features micro -averaging is used:
-        #                 _Micro averaging computes a global average F1 score by counting the sums of the True Positives (TP),
-        #                 False Negatives (FN), and False Positives (FP) over all classes. These are then plugged in the above $F_1$ equation._
-        #                 """
-        #         )
-        #         n_folds = 3
-        #         with st.spinner("Validating..."):
-        #             error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
-        #         st.subheader(f"Metrics with {n_folds} validation folds.")
-        #         st.write(error)
+        if VAL_OK:
+            with st.expander("Validation metrics"):
+                st.write(
+                    r"""
+                        #### For numeric features the validation error is measured with Root Mean Squared Error (RMSE).
+                        _(Lower is better)_   
+                        $$ 
+                        RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^n (y_{\text{pred}}-y_{\text{real}})^2}
+                        $$ 
+                        """
+                )
+                st.write(
+                    r"""
+                        #### For categorical features the measure is $F_1$ score.
+                        _(higher is better)_   
+                        For binary features
+                        $$ 
+                        F_1 = \frac{\text{true positives}}   {\text{true positives} + \frac{1}{2}(\text{false positives}+\text{false negatives})}
+                        $$ 
+                        For multiclass features micro -averaging is used:
+                        _Micro averaging computes a global average F1 score by counting the sums of the True Positives (TP),
+                        False Negatives (FN), and False Positives (FP) over all classes. These are then plugged in the above $F_1$ equation._
+                        """
+                )
+                n_folds = 3
+                with st.spinner("Validating..."):
+                    error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
+                st.subheader(f"Metrics with {n_folds} validation folds.")
+                st.write(error)
 
     # Give ability to download resulting data.
     csv = convert_df(res)

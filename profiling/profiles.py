@@ -26,6 +26,7 @@ if __name__ == '__main__':
     # Profile imputer impute method ------
     # imp = MySimpleImputer(dtype_list=dtype_list,strategy='mean')
     imp = XGBImputer(dtype_list=dtype_list)
+
     # lp = LineProfiler()
     # lp_wrapper = lp(imp.impute)
     # lp_wrapper(df)
@@ -35,23 +36,23 @@ if __name__ == '__main__':
     
 
     # Profile XGBImputer train method ------
-    # lp = LineProfiler()
-    # le = LabelEncoder()
-    # curr_col = df.columns[0]
-    # df_train = df.copy().dropna(subset=[curr_col])
-    # df_train.loc[:, curr_col] = le.fit_transform(df_train[curr_col])
+    lp = LineProfiler()
+    le = LabelEncoder()
+    curr_col = df.columns[0]
+    df_train = replace_infs(df.copy().dropna(subset=[curr_col]))
+    df_train.loc[:, curr_col] = le.fit_transform(df_train[curr_col])
 
-    # lp_wrapper = lp(imp.train)
-    # lp_wrapper(*[df_train,curr_col])
-    # lp.print_stats()
+    lp_wrapper = lp(imp.train)
+    lp_wrapper(*[df_train,curr_col])
+    lp.print_stats()
     # 99.8% of time is spent on gridsearch.
 
     # Profile measure_val_error ------
-    lp = LineProfiler()
-    lp_wrapper = lp(measure_val_error)
+    # lp = LineProfiler()
+    # lp_wrapper = lp(measure_val_error)
 
-    lp_wrapper(*[df,imp,5])
-    lp.print_stats()
+    # lp_wrapper(*[df,imp,5])
+    # lp.print_stats()
     # 99.5% of time is spent on imputing -> of which as seen previously 99.8% is spent on gridsearch.
 
     #--> All in all, grid search is the bottleneck for our performance, as could be expected.

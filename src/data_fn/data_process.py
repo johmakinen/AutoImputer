@@ -80,8 +80,8 @@ def test_input_data(df):
         "dtypes": set(df.dtypes.tolist()),
         "prop_missing": df.isnull().sum().sum() / (df.shape[0] * df.shape[1]),
         "n_full_nan_rows": len(df.index[df.isnull().all(1)]),
-        "n_full_nan_cols": sum(df.isnull().values.all(axis=0) * 1),
-        "bool_all_rows_have_nans":sum((df.isnull()).sum(axis=1)>0) == df.shape[0]
+        "n_full_nan_cols": int(sum(df.isnull().values.all(axis=0) * 1)),
+        "bool_all_rows_have_nans": sum((df.isnull()).sum(axis=1) > 0) == df.shape[0],
     }
 
     return res
@@ -105,11 +105,22 @@ def replace_infs(df):
     # df = df.mask(m1, df[~m1].max(), axis=1).mask(m2, df[~m2].min(), axis=1)
     # For performance resons infinities become nan.
     # Could use max/min of column values.
-    res = df.replace([np.inf, -np.inf], np.nan)
+    res = df.replace([np.inf, -np.inf], np.nan).replace("?", np.nan)
     return res
 
 
 def infer_cols(df):
+    """A function for inferring column types
+
+    Parameters
+    ----------
+    df : pd.Dataframe
+        Input data
+
+    Returns
+    -------
+    tuple (text_columns,all_categorical_columns)
+    """
     test_df = df.dropna()
     text_cols = [
         x
@@ -117,11 +128,13 @@ def infer_cols(df):
         if (test_df[x].dtype == object) and (isinstance(test_df.iloc[0][x], str))
     ]
     low_cardinality_cols = [
-        col for col in test_df.columns if len(np.unique(test_df[col])) < 5
+        col
+        for col in test_df.columns
+        if test_df[col].nunique() / test_df[col].count() < 0.02
     ]
     infer_cat_cols = set(text_cols + low_cardinality_cols)
 
-    return text_cols,infer_cat_cols
+    return text_cols, infer_cat_cols
 
 
 if __name__ == "__main__":
