@@ -179,9 +179,7 @@ if uploaded_file:
 if GOT_DATA:
     # Get user input for column types
     cols = df.columns
-    st.write(cols)
     text_cols, infer_cat_cols = infer_cat_cols_cache(df)
-    st.write(infer_cat_cols)
     cat_cols = st.multiselect(
         "Please input categorical columns here. We may have inferred some of them already.",
         cols,
@@ -238,12 +236,12 @@ if GOT_DATA and GOT_DTYPE_LIST:
             )
     elif method == "XGBoost":
         with st.expander("Settings:"):
-            cv_opt = st.slider(
-                "Number of folds to use in cross-validation when learning the best parameters. Due to Streamlit's limited resources, it is suggested to not use too large values.",
-                2,
-                4,
-                2,
-            )
+            # cv_opt = st.slider(
+            #     "Number of folds to use in cross-validation when learning the best parameters. Due to Streamlit's limited resources, it is suggested to not use too large values.",
+            #     2,
+            #     4,
+            #     2,
+            # )
             st.markdown(
                 """Extreme Gradient Boosting works by predicting each column\'s missing values using the other columns as features.   
                     This is done for each column that has missing values. For large dataset, or datasets with high cardinal categorical features, the runtime of the model can
@@ -301,7 +299,7 @@ if GOT_DATA and GOT_DTYPE_LIST:
                         False Negatives (FN), and False Positives (FP) over all classes. These are then plugged in the above $F_1$ equation._
                         """
                 )
-                n_folds = 3
+                n_folds = 2
                 with st.spinner("Validating..."):
                     error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
                 st.subheader(f"Metrics with {n_folds} validation folds.")
