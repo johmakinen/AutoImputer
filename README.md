@@ -9,7 +9,7 @@
 
 </div>
 
-![AutoImputer video](figures\app_video.gif)
+![AutoImputer video](figures/app_video.gif)
 
 
 
@@ -25,7 +25,7 @@ The app has (at the moment) two options for imputing the values. In the simplest
 * <strong>Check validation metrics</strong>: These metrics give a rough estimate how well the imputed values match the data.
 Once you are satisfied, you can to download the imputed dataset.
 
-![Autoimputer tbl](figures\table_fig.png)
+![Autoimputer tbl](figures/table_fig.png)
 
 ## 🛠️ How to contribute ?
 
