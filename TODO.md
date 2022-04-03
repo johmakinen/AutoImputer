@@ -44,15 +44,16 @@
 - [x] add dtype inference
 - [x] Add logo/figure of "AutoImputer" to readme and app.py
 - [ ] Github README
-- [ ] Add to portfolio (WIP) with figures
-- [ ] Datawig
+- [ ] Datawig model?
+    - Needs C++ 14+ and seems to not be for me, even though c++ build tools already installed.
+    - Better not to waste time with this
 - [ ] Validation error computation in app.py needs some complex session_state wrangling.
     - a button press reruns the whole script -> imputing is gone
 - [ ] PyTorch LSTM/RNN/CNN/??? Randomforest (https://www.frontiersin.org/articles/10.3389/fdata.2021.693674/full#h6)
     - Read up on what to use
     - Choose one method, implement it
     - tests
-    - Label propagation (Data Mining technique) for inputs that have less than x% labeled data.
+    - Label propagation? (Data Mining technique) for inputs that have less than x% labeled data.
 - [ ] Should we train XGBoost with only fully complete data?
     - XGBoost can handle missing values in feature columns
     - --> Will full data give better results?
