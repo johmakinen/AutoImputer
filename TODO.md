@@ -43,9 +43,8 @@
 - [x] add warning if all rows contain atleast one missing value -> cant validate
 - [x] add dtype inference
 - [x] Add logo/figure of "AutoImputer" to readme and app.py
-- [ ] Deploy on Streamlit Cloud
-    - probably out of memory
-    - Test without training
+- [ ] Validation error computation in app.py needs some complex session_state wrangling.
+    - a button press reruns the whole script -> imputing is gone
 - [ ] Github README
 - [ ] Add to portfolio (WIP)
 - [ ] PyTorch LSTM/RNN/CNN/??? Randomforest (https://www.frontiersin.org/articles/10.3389/fdata.2021.693674/full#h6)

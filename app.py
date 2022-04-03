@@ -246,14 +246,10 @@ if GOT_DATA and GOT_DTYPE_LIST:
     # If selection ready, press "Submit" to impute.
     with st.form(key="my_form"):
         submit_btn = st.form_submit_button(label="Impute!")
-        # imputer_dict = {
-        #     "SimpleImputer": MySimpleImputer(dtype_list=dtype_list, strategy=strategy),
-        #     "XGBoost": XGBImputer(
-        #         dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv_opt
-        #     ),
-        # }
     # Impute! -button is pressed -> impute, measure elapsed time, compute validation error.
+
     if submit_btn:
+
         if method=='SimpleImputer':
             imputer = get_simple_imputer(dtype_list=dtype_list,strategy=strategy)
         elif method=='XGBoost':
@@ -275,35 +271,38 @@ if GOT_DATA and GOT_DTYPE_LIST:
             st.subheader("Original data")
             st.write(df)
 
-        # Measure validation error
-        with st.expander("Validation metrics"):
-            st.write(
-                r"""
-                    #### For numeric features the validation error is measured with Root Mean Squared Error (RMSE).
-                    _(Lower is better)_   
-                    $$ 
-                    RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^n (y_{\text{pred}}-y_{\text{real}})^2}
-                    $$ 
-                    """
-            )
-            st.write(
-                r"""
-                    #### For categorical features the measure is $F_1$ score.
-                    _(higher is better)_   
-                    For binary features
-                    $$ 
-                    F_1 = \frac{\text{true positives}}   {\text{true positives} + \frac{1}{2}(\text{false positives}+\text{false negatives})}
-                    $$ 
-                    For multiclass features micro -averaging is used:
-                    _Micro averaging computes a global average F1 score by counting the sums of the True Positives (TP),
-                     False Negatives (FN), and False Positives (FP) over all classes. These are then plugged in the above $F_1$ equation._
-                    """
-            )
-            n_folds = 3
-            with st.spinner("Validating..."):
-                error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
-            st.subheader(f"Metrics with {n_folds} validation folds.")
-            st.write(error)
+        # # Measure validation error
+        # NOT IN USE AT THE MOMENT. STREAMLIT SESSION STATES DO NOT LIKE "BUTTON INSIDE A BUTTON"
+        # if st.button("Compute validation metrics"):
+
+        #     with st.expander("Validation metrics"):
+        #         st.write(
+        #             r"""
+        #                 #### For numeric features the validation error is measured with Root Mean Squared Error (RMSE).
+        #                 _(Lower is better)_   
+        #                 $$ 
+        #                 RMSE = \sqrt{\frac{1}{n}\sum_{i=1}^n (y_{\text{pred}}-y_{\text{real}})^2}
+        #                 $$ 
+        #                 """
+        #         )
+        #         st.write(
+        #             r"""
+        #                 #### For categorical features the measure is $F_1$ score.
+        #                 _(higher is better)_   
+        #                 For binary features
+        #                 $$ 
+        #                 F_1 = \frac{\text{true positives}}   {\text{true positives} + \frac{1}{2}(\text{false positives}+\text{false negatives})}
+        #                 $$ 
+        #                 For multiclass features micro -averaging is used:
+        #                 _Micro averaging computes a global average F1 score by counting the sums of the True Positives (TP),
+        #                 False Negatives (FN), and False Positives (FP) over all classes. These are then plugged in the above $F_1$ equation._
+        #                 """
+        #         )
+        #         n_folds = 3
+        #         with st.spinner("Validating..."):
+        #             error = measure_val_error(df, imputer=imputer, n_folds=n_folds)
+        #         st.subheader(f"Metrics with {n_folds} validation folds.")
+        #         st.write(error)
 
     # Give ability to download resulting data.
     csv = convert_df(res)

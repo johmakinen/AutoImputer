@@ -267,8 +267,6 @@ class XGBImputer:
                     eval_metric="mlogloss",
                 )
                 scoring = "f1_micro"
-            print("n_classes: " + str(n_classes))
-            print("Feature: " + str(curr_col) + " " + str(classes))
 
         grid_search = GridSearchCV(
             estimator=model,
