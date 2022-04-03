@@ -43,11 +43,11 @@
 - [x] add warning if all rows contain atleast one missing value -> cant validate
 - [x] add dtype inference
 - [x] Add logo/figure of "AutoImputer" to readme and app.py
-- [ ] Validation error computation in app.py needs some complex session_state wrangling.
-    - a button press reruns the whole script -> imputing is gone
-- [ ] Datawig
 - [ ] Github README
 - [ ] Add to portfolio (WIP) with figures
+- [ ] Datawig
+- [ ] Validation error computation in app.py needs some complex session_state wrangling.
+    - a button press reruns the whole script -> imputing is gone
 - [ ] PyTorch LSTM/RNN/CNN/??? Randomforest (https://www.frontiersin.org/articles/10.3389/fdata.2021.693674/full#h6)
     - Read up on what to use
     - Choose one method, implement it

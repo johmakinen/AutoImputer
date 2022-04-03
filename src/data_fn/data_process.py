@@ -121,16 +121,15 @@ def infer_cols(df):
     -------
     tuple (text_columns,all_categorical_columns)
     """
-    test_df = df.dropna()
     text_cols = [
         x
-        for x in test_df.columns
-        if (test_df[x].dtype == object) and (isinstance(test_df.iloc[0][x], str))
+        for x in df.columns
+        if (df[x].dtype == object) and (isinstance(df.dropna().iloc[0][x], str))
     ]
     low_cardinality_cols = [
         col
-        for col in test_df.columns
-        if test_df[col].nunique() / test_df[col].count() < 0.02
+        for col in df.columns
+        if (df[col].nunique() / df[col].count() <= 0.05) and (df[col].nunique() < 10)
     ]
     infer_cat_cols = set(text_cols + low_cardinality_cols)
 

@@ -179,10 +179,11 @@ if uploaded_file:
 if GOT_DATA:
     # Get user input for column types
     cols = df.columns
-
+    st.write(cols)
     text_cols, infer_cat_cols = infer_cat_cols_cache(df)
+    st.write(infer_cat_cols)
     cat_cols = st.multiselect(
-        "Please input categorical columns here. We have inferred some of them already.",
+        "Please input categorical columns here. We may have inferred some of them already.",
         cols,
         default=infer_cat_cols,
         key="cat_cols",
