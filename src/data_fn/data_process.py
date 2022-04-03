@@ -109,6 +109,21 @@ def replace_infs(df):
     return res
 
 
+def infer_cols(df):
+    test_df = df.dropna()
+    text_cols = [
+        x
+        for x in test_df.columns
+        if (test_df[x].dtype == object) and (isinstance(test_df.iloc[0][x], str))
+    ]
+    low_cardinality_cols = [
+        col for col in test_df.columns if len(np.unique(test_df[col])) < 5
+    ]
+    infer_cat_cols = set(text_cols + low_cardinality_cols)
+
+    return text_cols,infer_cat_cols
+
+
 if __name__ == "__main__":
     df = create_iris_sample()
     simulate_missing_values(df, output_name="sample_data_with_errors", prop=0.9)

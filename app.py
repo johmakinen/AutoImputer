@@ -8,7 +8,7 @@ import os
 
 # My modules
 from src.models_fn.imputer_models import MySimpleImputer, XGBImputer, measure_val_error
-from src.data_fn.data_process import test_input_data
+from src.data_fn.data_process import test_input_data, infer_cols
 from src.visualization_fn.visuals import plot_na_prop
 
 
@@ -18,6 +18,25 @@ st.set_page_config(
 
 # ----------------------------------------------------------------------------------------
 # FUNCTIONS:
+
+@st.experimental_singleton
+def get_simple_imputer(dtype_list,strategy):
+    return MySimpleImputer(dtype_list=dtype_list, strategy=strategy)
+
+@st.experimental_singleton
+def get_XGBImputer(dtype_list,cv):
+    return XGBImputer(
+                dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv
+            )
+
+@st.experimental_memo
+def read_input_data(uploaded_file):
+    return pd.read_csv(uploaded_file)
+
+@st.experimental_memo
+def infer_cat_cols_cache(df):
+    return infer_cols(df)
+
 @st.experimental_memo
 def convert_df(df):
     """Encode dataframe for csv writing.
@@ -115,7 +134,7 @@ if use_example_file:
 # Read data, error handling
 if uploaded_file:
     FILE_OK = 1
-    df = pd.read_csv(uploaded_file)
+    df = read_input_data(uploaded_file)
     val_df = test_input_data(df)
     if val_df["is_empty"]:
         st.error("Error: Empty data")
@@ -155,21 +174,7 @@ if GOT_DATA:
     # Get user input for column types
     cols = df.columns
 
-    # Infer coltypes:
-    test_df = df.dropna()
-    text_cols = [
-        x
-        for x in cols
-        if (test_df[x].dtype == object) and (isinstance(test_df.iloc[0][x], str))
-    ]
-    low_cardinality_cols = [
-        col for col in test_df.columns if len(np.unique(test_df[col])) < 5
-    ]
-    infer_cat_cols = set(text_cols + low_cardinality_cols)
-
-    # This gave a warning at some point, then it didn't.
-    # The widget with key "cat_cols" was created with a default value but also had its value set via the Session State API.
-
+    text_cols,infer_cat_cols = infer_cat_cols_cache(df)
     cat_cols = st.multiselect(
         "Please input categorical columns here. We have inferred some of them already.",
         cols,
@@ -194,7 +199,7 @@ if GOT_DATA and submit_cols:
     dtype_list = dict(zip(cols, dtypes))
     obv_wrong_dtype = [
         col
-        for col in test_df.columns
+        for col in df.columns
         if (dtype_list[col] == "numeric") and (col in text_cols)
     ]
     if obv_wrong_dtype:
@@ -241,16 +246,20 @@ if GOT_DATA and GOT_DTYPE_LIST:
     # If selection ready, press "Submit" to impute.
     with st.form(key="my_form"):
         submit_btn = st.form_submit_button(label="Impute!")
-        imputer_dict = {
-            "SimpleImputer": MySimpleImputer(dtype_list=dtype_list, strategy=strategy),
-            "XGBoost": XGBImputer(
-                dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv_opt
-            ),
-        }
+        # imputer_dict = {
+        #     "SimpleImputer": MySimpleImputer(dtype_list=dtype_list, strategy=strategy),
+        #     "XGBoost": XGBImputer(
+        #         dtype_list=dtype_list, random_seed=42, verbose=0, cv=cv_opt
+        #     ),
+        # }
     # Impute! -button is pressed -> impute, measure elapsed time, compute validation error.
     if submit_btn:
+        if method=='SimpleImputer':
+            imputer = get_simple_imputer(dtype_list=dtype_list,strategy=strategy)
+        elif method=='XGBoost':
+            imputer = get_XGBImputer(dtype_list=dtype_list, cv=cv_opt)
+
         start_time = timer()
-        imputer = imputer_dict[method]
         with st.spinner("Imputing missing values..."):
             res = imputer.impute(df)
 

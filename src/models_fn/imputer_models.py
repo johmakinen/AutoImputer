@@ -3,7 +3,7 @@ from pathlib import Path
 print("Running" if __name__ == "__main__" else "Importing", Path(__file__).resolve())
 
 from sklearn.impute import SimpleImputer
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error, f1_score
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -138,7 +138,7 @@ class XGBImputer:
         curr_df = replace_infs(df.copy())
         result = curr_df.copy()
 
-        nan_cols = df.columns[df.isna().any()].tolist()
+        nan_cols = curr_df.columns[curr_df.isna().any()].tolist()
         cat_cols = [
             col for col in curr_df.columns if self.dtype_list[col] == "categorical"
         ]
@@ -162,7 +162,7 @@ class XGBImputer:
                 # the above transformed_data is an array so convert it to dataframe
                 encoded_data = pd.DataFrame(
                     transformed_data, index=df_with_dummies.index
-                )
+                ).add_prefix("dummy_col_")
 
                 # now concatenate the original data and the encoded data using pandas
                 # Drop the non-onehotencoded categorical columns excluding curr_col.
@@ -178,6 +178,16 @@ class XGBImputer:
 
             # If current column to be imputed is categorical -> encode label
             if curr_col in cat_cols:
+
+                # If there are rare (<5%) classes, dont use them for now...
+                # This messes with Kfold splits even if using stratifiedKfold
+                val_counts = df_train[curr_col].value_counts(normalize=True) < 0.01
+                keep_classes = [
+                    col for col in val_counts.index.tolist() if not val_counts[col]
+                ]
+
+                df_train = df_train[df_train[curr_col].isin(keep_classes)]
+
                 # Encode label
                 le = LabelEncoder()
                 df_train.loc[:, curr_col] = le.fit_transform(df_train[curr_col])
@@ -233,6 +243,7 @@ class XGBImputer:
             }
 
         elif self.dtype_list[curr_col] == "categorical":
+
             model = xgb.XGBClassifier(use_label_encoder=False)
             classes = pd.unique(y_train)
             n_classes = len(classes)
@@ -246,23 +257,26 @@ class XGBImputer:
             # I dont like that objectives logloss and mlogloss are used in xgb but f1's are used in grid search
             # Change this in the future, for now it is ok.
             if n_classes == 2:
-                model.set_params(objective="binary:logistic",)
+                model.set_params(objective="binary:logistic", eval_metric="logloss")
                 scoring = "f1"
 
             else:
                 model.set_params(
-                    objective="multi:softmax", num_class=n_classes,
+                    objective="multi:softmax",
+                    num_class=n_classes,
+                    eval_metric="mlogloss",
                 )
                 scoring = "f1_micro"
+            print("n_classes: " + str(n_classes))
+            print("Feature: " + str(curr_col) + " " + str(classes))
 
-        grid_search = RandomizedSearchCV(
+        grid_search = GridSearchCV(
             estimator=model,
-            param_distributions=param_grid,
+            param_grid=param_grid,
             scoring=scoring,
             n_jobs=1,  # <- Streamlit's resources are very limited...
             cv=max(2, self.cv),
             refit=True,
-            random_state=self.random_seed,
             error_score="raise",
         )
 
